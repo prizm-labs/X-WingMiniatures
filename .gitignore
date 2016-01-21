@@ -1,0 +1,46 @@
+# =============== #
+# Unity generated #
+# =============== #
+X-WingMiniatures/Temp/
+X-WingMiniatures/Library/
+X-WingMiniatures/Assets/
+X-WingMiniatures/Builds/
+X-WingMiniatures/ProjectSettings/
+
+# ===================================== #
+# Visual Studio / MonoDevelop generated #
+# ===================================== #
+X-WingMiniatures/ExportedObj/
+X-WingMiniatures/obj/
+X-WingMiniatures/*.svd
+X-WingMiniatures/*.userprefs
+X-WingMiniatures/*.csproj
+X-WingMiniatures/*.pidb
+X-WingMiniatures/*.suo
+X-WingMiniatures/*.sln
+X-WingMiniatures/*.user
+X-WingMiniatures/*.unityproj
+X-WingMiniatures/*.booproj
+
+# ============ #
+# OS generated #
+# ============ #
+X-WingMiniatures/.DS_Store
+X-WingMiniatures/.DS_Store?
+X-WingMiniatures/._*
+X-WingMiniatures/.Spotlight-V100
+X-WingMiniatures/.Trashes
+X-WingMiniatures/ehthumbs.db
+X-WingMiniatures/Thumbs.db
+
+
+
+multiscreen-server/
+
+
+# ============ #
+# Don't Ignore #
+# ============ #
+
+X-WingMiniatures/Assets/!Scripts
+X-WingMiniatures/Assets/!Scenes
