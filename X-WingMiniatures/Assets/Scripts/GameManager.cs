@@ -5,6 +5,7 @@ using TouchScript;
 using TouchScript.Gestures;
 using UnityEngine.UI;
 using SimpleJSON;
+using UnityEngine.SceneManagement;
 
 public enum GameState {
 	None = 0,
@@ -38,6 +39,7 @@ public class GameManager : MonoBehaviour {
 	private GameObject bigBangStars;
 	private GameObject actionStars;
 	private GameObject intro3DText;
+	private GameObject waitingForText;
 
 	[System.NonSerialized]
 	public AudioSource mainAudioSource;
@@ -46,9 +48,24 @@ public class GameManager : MonoBehaviour {
 
 	[System.NonSerialized]
 	public List<GameObject> playerList = new List<GameObject> ();
+	private GameObject playerManagerObject;
 
 	string jsonURL = "10.0.1.130:8000/ships.json";
-	JSONObject masterJSON;
+	JSONClass masterJSON;
+
+
+	float DistanceFromCamera = 30.0f;
+	float BoundariesHeight = 50.0f;
+
+
+	private int maxNumPlayers = 5;
+	private int numPlayers = 2;
+	private int numPlayersJoined = 0;
+
+	private Slider playerNumSlider;
+	private Text playerNumUI;
+
+
 
 	void Awake () {
 		if (Instance == null)
@@ -59,31 +76,64 @@ public class GameManager : MonoBehaviour {
 		DontDestroyOnLoad (this.gameObject);
 
 		StartCoroutine(LoadJsonFromServer ());
+
+		//uncomment this when done working on main scene
+		/*
+		playerNumSlider = GameObject.Find ("Slider").GetComponent<Slider> ();
+		playerNumUI = GameObject.Find ("Number").GetComponent<Text> ();
+		playerNumSlider.value = 0.25f;
+		*/
+
+		//comment this out when done working on main scene
+		InitializeGameManager();
+		MyGameState++;
+	}
+
+	public void SetPlayerNum() {
+		numPlayers =(int) (playerNumSlider.value * (float)maxNumPlayers + 1.0f);
+		Debug.Log ("num players: " + numPlayers.ToString ());
+		UpdatePlayerNumUI();
+	}
+
+	public void UpdatePlayerNumUI() {
+		playerNumUI.text = numPlayers.ToString();
+	}
+
+	public void LoadMainScene() {
+		UpdatePlayerNumUI ();
+		MyGameState++;
+		SceneManager.LoadScene ("Main");
 	}
 
 	IEnumerator LoadJsonFromServer(){
-		masterJSON = new JSONObject ();
+		masterJSON = new JSONClass ();
 
 		var json = new WWW (jsonURL);
 		yield return json;
 
-		masterJSON = JSON.Parse (json);
+		masterJSON = JSON.Parse (json.text).AsObject;
 		Debug.Log("json loaded: " + masterJSON["ships"].ToString());
 	}
 
 	void OnLevelWasLoaded() {
-		
+		Debug.Log ("preserved number of players as: " + numPlayers.ToString ());
 		InitializeGameManager ();
 	}
 
 	void InitializeGameManager(){
+
+		playerManagerObject = GameObject.Find ("PlayerManager");
+
 		Debug.Log ("initializing GameManager");
 		msgCanvas = GameObject.Find ("MsgCanvas");
 		mainCamera = GameObject.Find ("MainCamera").GetComponent<Camera> ();
 		mainAudioSource = GetComponent<AudioSource> ();
 
+		waitingForText = GameObject.Find ("WaitingFor");
+
 		starsMaster = GameObject.Find ("Stars");
-		bigBangStars = starsMaster.transform.FindChild ("BigBang");
+		Debug.Log ("stars master: " + starsMaster.ToString ());
+		bigBangStars = starsMaster.transform.FindChild ("BigBang").gameObject;
 		actionStars = GameObject.Find ("ActionStars");
 		intro3DText = GameObject.Find ("Intro3DText");
 
@@ -92,18 +142,22 @@ public class GameManager : MonoBehaviour {
 		}
 		starsMaster.SetActive (false);
 		actionStars.SetActive (false);
+
+		waitingForText.GetComponent<Text> ().text = "Waiting for " + (numPlayers - numPlayersJoined).ToString () + " more players to join\nJoin IP Address:'" + TabletopInitialization.GetIP () + ":6969'";
 	}
 
 	IEnumerator IntroduceWorld() {
 		
 		starsMaster.SetActive (true);
 		bigBangStars.SetActive (true);
-		yield return new WaitForSeconds (1.0);
-
 		mainAudioSource.clip = starWarsIntroClip;
 		mainAudioSource.Play ();
 
-		intro3DText.GetComponent<Rigidbody> ().velocity = new Vector3 (0.0f, -2.0f, 5.0f);
+		yield return new WaitForSeconds (1.0f);
+
+		intro3DText.GetComponent<Rigidbody> ().velocity = new Vector3 (0.0f, -0.5f, 1.0f);
+
+		yield return new WaitForSeconds (2.0f);
 
 		foreach(Transform child in starsMaster.transform) {
 			child.gameObject.SetActive (true);
@@ -125,6 +179,15 @@ public class GameManager : MonoBehaviour {
 		if (Input.GetKeyDown (KeyCode.W)) {
 			StartCoroutine(IntroduceWorld ());
 		}
+		if (Input.GetKeyDown (KeyCode.E)) {
+			AdvanceGameState ();
+		}
+		if (Input.GetKeyDown (KeyCode.R)) {
+			PlayerSchema newPlay = new PlayerSchema ();
+			newPlay.faction = "dark";
+			newPlay.name = "Donald Duck";
+			CreateNewPlayer (newPlay);
+		}
 
 
 		if (Input.GetKeyDown (KeyCode.Space)) {
@@ -133,11 +196,26 @@ public class GameManager : MonoBehaviour {
 
 	}
 
+	public Vector3 GetRandomSpawnPosition(string faction) {
+		//light spawns on left, dark spawns on right
+		switch (faction) {
+		case "light":
+			return mainCamera.ViewportToWorldPoint(new Vector3(0.05f, Random.value, DistanceFromCamera));
+
+		case "dark":
+			return mainCamera.ViewportToWorldPoint(new Vector3(0.95f, Random.value, DistanceFromCamera));
+
+		default:
+			Debug.LogError ("invalid faction: " + faction + ", spawning in middle of game");
+			return mainCamera.ViewportToWorldPoint(new Vector3(0.5f, 0.5f, DistanceFromCamera));
+		}
+	}
+
 	public void AdvanceGameState() {
 		MyGameState++;
 		Debug.Log ("Game State Advance: " + MyGameState.ToString () + " out of: " + System.Enum.GetValues (typeof(GameState)).Length.ToString ());
 
-		if (MyGameState > System.Enum.GetValues (typeof(GameState)).Length) {
+		if ((int)MyGameState > System.Enum.GetValues (typeof(GameState)).Length - 1) {
 			MyGameState = GameState.PlanningPhase;
 		}
 
@@ -147,6 +225,7 @@ public class GameManager : MonoBehaviour {
 			break;
 		case GameState.WaitingForPlayersChooseShip:
 			Debug.Log ("players choosing ship");
+			StartCoroutine(IntroduceWorld ());
 			break;
 		case GameState.PlanningPhase:
 			Debug.Log ("players are planning");
@@ -169,8 +248,29 @@ public class GameManager : MonoBehaviour {
 
 	//called on when a player record is added
 	public void CreateNewPlayer(PlayerSchema playerToCreate) {
+		createMsgLog (playerToCreate.name + " has joined the game!");
+		
 		Debug.Log("creating new player in: " + playerToCreate.faction);
 		//instantiate player prefab
+		GameObject newPlayer = Instantiate(playerPrefab) as GameObject;
+		newPlayer.GetComponent<Player> ().record.mongoDocument = playerToCreate;
+
+		newPlayer.transform.SetParent (playerManagerObject);
+		playerList.Add (newPlayer);
+
+
+
+		numPlayersJoined++;
+		if (numPlayersJoined >= numPlayers) {
+			//disable record handler
+
+
+			AdvanceGameState ();
+			createMsgLog (" ");
+			waitingForText.SetActive (false);
+		} else {
+			waitingForText.GetComponent<Text> ().text = "Waiting for " + (numPlayers - numPlayersJoined).ToString () + " more players to join\nJoin IP Address:'" + TabletopInitialization.GetIP () + ":6969'";
+		}
 	}
 		
 
@@ -185,19 +285,6 @@ public class GameManager : MonoBehaviour {
 		Debug.Log ("player lost connection, object is: " + id);
 	}
 
-	void OnApplicationQuit(){
-		StopAllCoroutines ();
-		reset ();
-	}
-	
-	public void reset(){
-		StartCoroutine (resetGame ());
-	}
-
-	IEnumerator resetGame() {
-		var methodCall = Meteor.Method<ChannelResponse>.Call ("endTabletopSession", GameObject.Find ("GameManager").GetComponent<TabletopInitialization>().sessionID);
-		yield return (Coroutine)methodCall;
-	}
 
 
 
@@ -212,12 +299,12 @@ public class GameManager : MonoBehaviour {
 
 			newPos.x = Mathf.PerlinNoise (newPos.x * minPerlin, newPos.x * maxPerlin) - 0.5f;
 			newPos.y = Mathf.PerlinNoise (newPos.y * minPerlin, newPos.y * maxPerlin) - 0.5f;
-			camera.transform.position = newPos;
+			GetComponent<Camera>().transform.position = newPos;
 
 			yield return new WaitForSeconds (innerDuration);
 		}
 
-		camera.transform.position = cameraSetPosition;
+		GetComponent<Camera>().transform.position = cameraSetPosition;
 
 		yield return null;
 	}
@@ -238,9 +325,6 @@ public class GameManager : MonoBehaviour {
 
 	//creates walls so balls can't escape world
 	public void CreateBoundaries() {
-
-		float DistanceFromCamera = 30.0f;
-		float BoundariesHeight = 50.0f;
 
 		Vector3 lowerLeft = mainCamera.ViewportToWorldPoint (new Vector3 (0, 0, DistanceFromCamera));
 		Vector3 lowerRight = mainCamera.ViewportToWorldPoint (new Vector3 (1, 0, DistanceFromCamera));
@@ -288,4 +372,23 @@ public class GameManager : MonoBehaviour {
 		Destroy(rightBound.GetComponent<MeshRenderer>());
 		Destroy(rightBound.GetComponent<MeshCollider>());
 	}
+
+
+	void OnApplicationQuit(){
+		StopAllCoroutines ();
+		reset ();
+	}
+
+	public void reset(){
+		StartCoroutine (resetGame ());
+	}
+
+	IEnumerator resetGame() {
+		var methodCall = Meteor.Method<ChannelResponse>.Call ("endTabletopSession", GameObject.Find ("GameManager").GetComponent<TabletopInitialization>().sessionID);
+		yield return (Coroutine)methodCall;
+	}
+
+
+
+
 }
