@@ -4,9 +4,10 @@ using System.Collections.Generic;
 using TouchScript;
 using TouchScript.Gestures;
 using UnityEngine.UI;
+using SimpleJSON;
 
 public enum GameState {
-	None,
+	None = 0,
 	WaitingForPlayersEnter, 
 	WaitingForPlayersChooseShip, 
 	PlanningPhase, 
@@ -17,335 +18,175 @@ public enum GameState {
 
 
 public class GameManager : MonoBehaviour {
-	public GameObject playerPrefab;
-
-	//public PrizmRecordGroup recordGroup; 
-	public BootstrapTT bootstrap; 
-
-	public List<GameObject> resourcePrefabs;
-	//public List<GameObject> listOfTerrainTilesInOrder;
-
-	private GameObject cube_ThatRepresentsPlayer;
-
-	private Player currentPlayerTurn;
-	public Player CurrentPlayerTurn{ get { return currentPlayerTurn; } set { currentPlayerTurn = value; } }
-	private bool beginnerGame;
-	public bool BeginnerGame{ get { return beginnerGame; } set { beginnerGame = value; } }
-	public List<Player> PlayersRegisteredBeforeTurnOrder;
-	public List<Player> TheOneOfficialAllPlayerListInOrderOfTurns;
-	//public GameObject dockTokenPrefab;
-	private bool playerDockTokensGenerated;
-
-	public GameState MyGameState;
-
-	public static GameManager Instance{ get; private set; }
-	private int playerNum;
-
-	public Button start_btn;
-
-	public List<string> ListOfDummyNames;
-	public GameObject DockCardPrefab;
-	public GameObject bouncingArrow_Prefab;
-	public GameObject private_tut;
-
-	private bool firstPlayerChosen;
-
-	public delegate void TurnChangeAction(Player ply);
-	public static event TurnChangeAction OnTurnChange;
-
-	private TextMesh gameStateReporter;
-	public TextMesh GameStateReporter{ get { return gameStateReporter; } set { gameStateReporter = value; } }
-
-	private TextMesh public_TutorialText;
-	public TextMesh PublicTutorialText{ get { return public_TutorialText; } set {public_TutorialText = value; } }
-
-	//private List<Establishment> establishmentsPlacedOnBoard;
-	public List<Establishment> EstablishmentsPlacedOnBoard;
-
-	//private List<Road> roadsPlacedOnBoard;
-	public List<Road> RoadsPlacedOnBoard;
-
-	public List<Resource> ResourcesOnBoardWaitingToBeCollected;
-	private int resourcesCollected;
-	public int ResourcesCollected{ get { return resourcesCollected; } set { resourcesCollected = value; } }
-
 	
-	private bool allplayersplacedInitialSettlements;
-	public bool AllPlayersplacedInitialRoadsSettlements{ get { return allplayersplacedInitialSettlements; } set { allplayersplacedInitialSettlements = value; } }
+	public GameObject playerPrefab;
+	public Text msgPrefab;
 
-	public List<Color> ColorValuesInGame;
-	public List<string> ColorNamesInGame;
+	[System.NonSerialized]
+	public GameState MyGameState = GameState.None;
 
-	public List<Terrain_Script> AllHexTerrainsInGame;
+	[System.NonSerialized]
+	public static GameManager Instance;
+
+	private Camera mainCamera;
+	private float minPerlin = -10f, maxPerlin = 10f;
+	private float shakeDuration = 0.02f;
+	private int shakeIterations = 10;
+
+	private GameObject msgCanvas;
+	private GameObject starsMaster;
+	private GameObject bigBangStars;
+	private GameObject actionStars;
+	private GameObject intro3DText;
+
+	[System.NonSerialized]
+	public AudioSource mainAudioSource;
+	public AudioClip starWarsIntroClip;
+	public AudioClip starWarsVaderThemeClip;
+
+	[System.NonSerialized]
+	public List<GameObject> playerList = new List<GameObject> ();
+
+	string jsonURL = "10.0.1.130:8000/ships.json";
+	JSONObject masterJSON;
 
 	void Awake () {
-		Instance = this;
-		//recordGroup = GetComponent<PrizmRecordGroup>();
-		bootstrap = GetComponent<BootstrapTT> ();
+		if (Instance == null)
+			Instance = this;
+		else if (Instance != this)
+			Debug.LogError ("other instance of game manager!");
+		
+		DontDestroyOnLoad (this.gameObject);
+
+		StartCoroutine(LoadJsonFromServer ());
 	}
 
-	void Start(){
-		MyGameState = GameState.SetupHexTilesNumberTokensAndHarbors;
-		GameStateReporter = GameObject.FindGameObjectWithTag ("GameState_Reporter").GetComponent<TextMesh> ();
-		PublicTutorialText = GameObject.FindGameObjectWithTag ("Public_Tutorial").transform.FindChild ("tut_text").GetComponent<TextMesh> ();
-		StartCoroutine (SetupGame ());
+	IEnumerator LoadJsonFromServer(){
+		masterJSON = new JSONObject ();
+
+		var json = new WWW (jsonURL);
+		yield return json;
+
+		masterJSON = JSON.Parse (json);
+		Debug.Log("json loaded: " + masterJSON["ships"].ToString());
 	}
 
-	public IEnumerator SetupGame(){
-//		while (!MyGameState.Equals(GameState.SetupHexTilesNumberTokensAndHarbors)) {
-//			yield return null;
-//		}
-		GameStateReporter.text = "GAME State = setting up hex tiles and harbors";
-		yield return StartCoroutine (Setup_Manager.Instance.SetupHexTiles ());
-		MyGameState = GameState.WaitingToRegisterAllPlayersViaMobile;
-		while (!MyGameState.Equals(GameState.WaitingToRegisterAllPlayersViaMobile)) {
-			yield return null;
-		}
-		GameStateReporter.text = "Waiting for all players to register via Mobile Device";
-		PublicTutorialText.text = "Sign in to play using your\nmobile device.";
-		while (!MyGameState.Equals(GameState.DockPlayerCardsAndEstablishTurnOrder)) {
-			yield return null;
-		}
-		GameStateReporter.text = "Player should pull Circular tokens \ntowards their edge of the board";
-		PublicTutorialText.text = "Pull your card towards\nyour edge of the board";
-		if (!playerDockTokensGenerated) {
-			int i = 0;
-			foreach (Player ply in PlayersRegisteredBeforeTurnOrder) {
-				GameObject dockCrd = Instantiate (DockCardPrefab, new Vector3 (Random.Range (-12, 12), 10, Random.Range (-4, 4)), Quaternion.identity) as GameObject;
-				dockCrd.GetComponent<DockCard>().DockCardColorValue = ColorValuesInGame[i];
-				dockCrd.GetComponent<DockCard>().DockCardColor = ColorNamesInGame[i];
-				
-				dockCrd.transform.SetParent (GameObject.FindGameObjectWithTag ("DockCard_Manager").transform);
-				//dockCrd.transform.FindChild ("PlayerNameOnToken").GetComponent<TextMesh> ().text = ply.MyName;
-				/**This is where you will customize the dock card for a player
-				 **/
+	void OnLevelWasLoaded() {
+		
+		InitializeGameManager ();
+	}
 
-				dockCrd.GetComponent<DockCard> ().MyPlayer = ply;
-				ply.MyDockCard = dockCrd.GetComponent<DockCard> ();
-				ply.MyColor = dockCrd.GetComponent<DockCard> ().DockCardColor;
-				ply.MyColorValue = dockCrd.GetComponent<DockCard> ().DockCardColorValue;
-				dockCrd.transform.FindChild ("Canvas/p_header/t_player_name").GetComponent<Text>().text = ply.MyName;
-				dockCrd.transform.FindChild ("Canvas/p_header/i_color_banner").GetComponent<Image>().color = ply.MyColorValue;
-				i++;
-					
-			}
-			playerDockTokensGenerated = true;
-		}
+	void InitializeGameManager(){
+		Debug.Log ("initializing GameManager");
+		msgCanvas = GameObject.Find ("MsgCanvas");
+		mainCamera = GameObject.Find ("MainCamera").GetComponent<Camera> ();
+		mainAudioSource = GetComponent<AudioSource> ();
 
-		while (!MyGameState.Equals(GameState.PlaceInitialSettlementsAndRoads)) {
-			yield return null;
-		}
-		GameStateReporter.text = "Please Wait. Game is creating DB records and\ndistributing all starting items to PLAYERS";
-		PublicTutorialText.text = "Please Wait.\nSetting up behind the scenes.";
-		yield return StartCoroutine (TabletopInitialization.Instance.GivePlayerStartingItems ());
-		GameStateReporter.text = "All players should place one settlement on the board";
-		PublicTutorialText.text = "Each player may place one \nsettlement at an intersection\non the board.";
-		if (!firstPlayerChosen) {				
-			Debug.Log ("Gave Players Starting Items");
-			ChooseFirstPlayer ();
-			//give every player two starting items.
-		} 
-		//Give players their first settlement to place
-		foreach(Player ply in TheOneOfficialAllPlayerListInOrderOfTurns){
-			ply.GivePlayerASettlementToPlace();
-		}
-//		yield return StartCoroutine (TabletopInitialization.Instance.GivePlayerStartingItems ());
-		yield return StartCoroutine (TabletopInitialization.Instance.CreateAllResourceCardsAndDevelopmentCards());
-		while(EstablishmentsPlacedOnBoard.Count < TheOneOfficialAllPlayerListInOrderOfTurns.Count){
-			yield return null;
-		}
-		//give all players their second establishment to place.
-		PublicTutorialText.text = "Each player may place their 2nd \nsettlement at an intersection\non the board.";
-		foreach(Player ply in TheOneOfficialAllPlayerListInOrderOfTurns){
-			ply.GivePlayerASettlementToPlace();
-		}
-		while(EstablishmentsPlacedOnBoard.Count < TheOneOfficialAllPlayerListInOrderOfTurns.Count*2){
-			yield return null;
-		}
-		//give all players their first road to place.
-		PublicTutorialText.text = "Each player may place their 1st \nroad at any intersection on the board\nconnected to one of their \nsettlements.";
+		starsMaster = GameObject.Find ("Stars");
+		bigBangStars = starsMaster.transform.FindChild ("BigBang");
+		actionStars = GameObject.Find ("ActionStars");
+		intro3DText = GameObject.Find ("Intro3DText");
 
-		foreach(Player ply in TheOneOfficialAllPlayerListInOrderOfTurns){
-			ply.GivePlayerARoadToPlace();
+		foreach (Transform child in starsMaster.transform) {
+			child.gameObject.SetActive (false);
 		}
-		while(RoadsPlacedOnBoard.Count < TheOneOfficialAllPlayerListInOrderOfTurns.Count){
-			yield return null;
-		}
-		//give all players their 2nd road to place.
-		PublicTutorialText.text = "Each player may place their 2nd \nroad at any intersection on the board\nconnected to one of their \nsettlements or roads.";
-		foreach(Player ply in TheOneOfficialAllPlayerListInOrderOfTurns){
-			ply.GivePlayerARoadToPlace();
-		}
-		while(RoadsPlacedOnBoard.Count < TheOneOfficialAllPlayerListInOrderOfTurns.Count*2){
-			yield return null;
-		}
-		PublicTutorialText.text = "Each player collects \nthe resources from their second\nsettlement. Drag the resource\n to your wallet/pouch.\nIt will become visible on\nyour mobile device.";
+		starsMaster.SetActive (false);
+		actionStars.SetActive (false);
+	}
 
-		//Give All Player their resources from the 2nd settlement they placed. 
-		foreach (Player ply in TheOneOfficialAllPlayerListInOrderOfTurns) {
-			ply.MySecondEstablishmentPlacedDuringSetup.SpawnInitialResources();
+	IEnumerator IntroduceWorld() {
+		
+		starsMaster.SetActive (true);
+		bigBangStars.SetActive (true);
+		yield return new WaitForSeconds (1.0);
+
+		mainAudioSource.clip = starWarsIntroClip;
+		mainAudioSource.Play ();
+
+		intro3DText.GetComponent<Rigidbody> ().velocity = new Vector3 (0.0f, -2.0f, 5.0f);
+
+		foreach(Transform child in starsMaster.transform) {
+			child.gameObject.SetActive (true);
+		}
+		for (int i = 99; i > 0; i--) {
+			mainAudioSource.volume = i * .01f;
+			yield return new WaitForSeconds(0.5f);
+		}
+		bigBangStars.SetActive (false);
+		mainAudioSource.Stop();
+		intro3DText.SetActive (false);
+	}
+
+	void Update(){
+
+		if (Input.GetKeyDown (KeyCode.Q)) {
+			InitializeGameManager ();
+		}
+		if (Input.GetKeyDown (KeyCode.W)) {
+			StartCoroutine(IntroduceWorld ());
 		}
 
-		while (ResourcesOnBoardWaitingToBeCollected.Count > ResourcesCollected) {
-			yield return null;
+
+		if (Input.GetKeyDown (KeyCode.Space)) {
+
 		}
-		ResourcesOnBoardWaitingToBeCollected.Clear ();
-		ResourcesCollected = 0;
-
-		Debug.Log ("Whew  ^^^^^^^^^ we got through a lot of setup");
-		AdvanceTurn(CurrentPlayerTurn);
-		PublicTutorialText.text = "Now for the first players first\nofficial turn of the game.\n " +CurrentPlayerTurn.MyName + ": \nPlease Roll to produce resources.";
-
-		yield break;
-
-
-
-//		case GameState.GenerateStartingResourcesForPlayers:
-//			break;
-//		case GameState.PlayerTurn_RollPhase:
-//			break;
-//		case GameState.PlayerTurn_CollectBountyPhase:
-//			break;
-//		case GameState.PlayerTurn_TradePhase_Domestic:
-//			break;
-//		case GameState.PlayerTurn_TradePhase_Maritime:
-//			break;
-//		case GameState.PlayerTurn_BuildPhase:
-//			break;
-//		case GameState.PlayerTurn_BuyDevCards:
-//			break;
-//		case GameState.PlayerTurn_UseDevCard:
-//			break;
-//		case GameState.PlayerTurn_Robber_EveryOneReturnIfExceeding7:
-//			break;
-//		case GameState.PlayerTurn_Robber_RobOtherPlayer:
-//			break;
-//		default:
-//			break;
-//		}
 
 	}
 
-	public void ChooseFirstPlayer(){
-		if (!firstPlayerChosen) {
-			int rand = Random.Range (0, (TheOneOfficialAllPlayerListInOrderOfTurns.Count-1));
-			Debug.Log ("the first player that I chose was: " + rand);
-			//OnTurnChange (TheOneOfficialAllPlayerListInOrderOfTurns [rand]);
-			CurrentPlayerTurn = TheOneOfficialAllPlayerListInOrderOfTurns [rand];
-			if(TheOneOfficialAllPlayerListInOrderOfTurns.Count >= 5){
-				Debug.Log ("Playing with 5 OR 6 players");
-			}
-			firstPlayerChosen = true;
+	public void AdvanceGameState() {
+		MyGameState++;
+		Debug.Log ("Game State Advance: " + MyGameState.ToString () + " out of: " + System.Enum.GetValues (typeof(GameState)).Length.ToString ());
+
+		if (MyGameState > System.Enum.GetValues (typeof(GameState)).Length) {
+			MyGameState = GameState.PlanningPhase;
+		}
+
+		switch (MyGameState) {
+		case GameState.WaitingForPlayersEnter:
+			Debug.Log ("waiting for players to enter");
+			break;
+		case GameState.WaitingForPlayersChooseShip:
+			Debug.Log ("players choosing ship");
+			break;
+		case GameState.PlanningPhase:
+			Debug.Log ("players are planning");
+			break;
+		case GameState.ActivationPhase:
+			Debug.Log ("players activating");
+			break;
+		case GameState.CombatPhase:
+			Debug.Log ("entering combat phase");
+			break;
+		case GameState.EndPhase:
+			Debug.Log ("cleanup phase");
+			//check if all ships of one faction are dead
+			break;
+		default:
+			Debug.LogError("game state unstable!" + MyGameState.ToString());
+			break;
 		}
 	}
 
-
-
-	public void AdvanceTurn(Player _currentPlayer){
-		Debug.Log ("Advancing the turn");
-		int playerTurnNum = TheOneOfficialAllPlayerListInOrderOfTurns.IndexOf (_currentPlayer);
-		Debug.Log ("Player turn BEFORE TURN CHANGE" + _currentPlayer.MyTurnNumID);
-		playerTurnNum++;
-		if (playerTurnNum > TheOneOfficialAllPlayerListInOrderOfTurns.Count-1) {
-			Debug.Log ("plyaerTurn Num being set to zero ");
-			playerTurnNum = 0;
-		} 
-		CurrentPlayerTurn = TheOneOfficialAllPlayerListInOrderOfTurns [playerTurnNum];
-		OnTurnChange(TheOneOfficialAllPlayerListInOrderOfTurns[playerTurnNum]);
-		MyGameState = GameState.PlayerTurn_RollPhase;
+	//called on when a player record is added
+	public void CreateNewPlayer(PlayerSchema playerToCreate) {
+		Debug.Log("creating new player in: " + playerToCreate.faction);
+		//instantiate player prefab
 	}
-
-	//the devCard deck in the corner of the board should be highlighted throughout all of the player turn
-	//this player action can disrupt the normal turn phase order
-	public void UseDevelopmentCard(GameState bookMarkGameState){
-
-	}
-
-	public void SetupTradeEnvironment(){
-
-	}
-
-	//this might involve putting down an invisible layer that the dice can bounce around inside 
-	public void SetupDiceRollingEnvironment(){
-
-	}
-
-	public void CheckIfResourcesLeftUncollectedOnBoard(){
-
-	}
-
-	public void TradePhase_CheckIfANyResourceCardsLeftUnclaimed(){
-
-	}
-
-
-	public void CreateNewPlayerTest0(){
-		int i = GameObject.FindGameObjectWithTag ("Player_Manager").transform.childCount;
-		Debug.Log ("Child Count on Players = " + i);
-		if (i < 6) {
-			cube_ThatRepresentsPlayer = Instantiate (playerPrefab) as GameObject;
-			cube_ThatRepresentsPlayer.name = ListOfDummyNames[i];
-			cube_ThatRepresentsPlayer.GetComponent<Player>().MyName = ListOfDummyNames[i];
-			cube_ThatRepresentsPlayer.transform.SetParent (GameObject.FindGameObjectWithTag ("Player_Manager").transform);
-			cube_ThatRepresentsPlayer.GetComponent<MeshRenderer> ().material.color = Color.black;
-			cube_ThatRepresentsPlayer.transform.position = cube_ThatRepresentsPlayer.transform.parent.transform.position;
-			cube_ThatRepresentsPlayer.transform.position = new Vector3 (cube_ThatRepresentsPlayer.transform.position.x + i, cube_ThatRepresentsPlayer.transform.position.y, cube_ThatRepresentsPlayer.transform.position.z);
-			PlayersRegisteredBeforeTurnOrder.Add (cube_ThatRepresentsPlayer.GetComponent<Player>());
-		}
-		if(GameObject.FindGameObjectWithTag ("Player_Manager").transform.childCount >= 2){
-			start_btn.interactable = true;
-		}
-	}
-	
-	public void CreateNewPlayer(string playerName, string player_id) {
-		int i = GameObject.FindGameObjectWithTag ("Player_Manager").transform.childCount;
-
-		if (i < 6) {
-			//Debug.Log ("Tap the cube.");
-			cube_ThatRepresentsPlayer = Instantiate (playerPrefab) as GameObject;
-			cube_ThatRepresentsPlayer.name = playerName;
-			cube_ThatRepresentsPlayer.GetComponent<Player>().MyName = playerName;
-//			cube_ThatRepresentsPlayer.GetComponent<touchMe> ().playerID = player_id;
-//			cube_ThatRepresentsPlayer.GetComponent<touchMe> ().dbEntry.location = "home";
-//			cube_ThatRepresentsPlayer.GetComponent<touchMe> ().AddToRecordGroup ();
-			cube_ThatRepresentsPlayer.transform.SetParent (GameObject.FindGameObjectWithTag ("Player_Manager").transform);
-			cube_ThatRepresentsPlayer.GetComponent<MeshRenderer> ().material.color = Color.red;
-			cube_ThatRepresentsPlayer.transform.position = cube_ThatRepresentsPlayer.transform.parent.transform.position;
-			cube_ThatRepresentsPlayer.transform.position = new Vector3 (cube_ThatRepresentsPlayer.transform.position.x + i, cube_ThatRepresentsPlayer.transform.position.y, cube_ThatRepresentsPlayer.transform.position.z);
-			PlayersRegisteredBeforeTurnOrder.Add (cube_ThatRepresentsPlayer.GetComponent<Player>());
-		}
-		if(GameObject.FindGameObjectWithTag ("Player_Manager").transform.childCount >= 2){
-			start_btn.interactable = true;
-		}
-	}
-
-
-
-
-
-	
-//	public void HandleDidChangeRecord (string arg1, DatabaseEntry arg2, IDictionary arg3, string[] arg4){
-//		Debug.Log ("record changed: " + arg2.location);
-//		if (arg2.location == "home") {
-//			cube_ThatRepresentsPlayer.SetActive(true);
-//		} 
-//	}
+		
 
 	//when someone quits the game
 	public void HandleDidLosePlayer(string id) {
 		foreach(GameObject obj in Object.FindObjectsOfType(typeof(GameObject))){
 			if(obj.tag == "Player"){
-//				if(obj.GetComponent<touchMe>().playerID == id){
-//					Destroy(obj);
-//				}
+				//probably destroy the player object
 			}
 		}
 
 		Debug.Log ("player lost connection, object is: " + id);
-
 	}
 
 	void OnApplicationQuit(){
+		StopAllCoroutines ();
 		reset ();
 	}
 	
@@ -354,8 +195,97 @@ public class GameManager : MonoBehaviour {
 	}
 
 	IEnumerator resetGame() {
-		var methodCall = Meteor.Method<ChannelResponse>.Call ("endTabletopSession", GameObject.Find ("GameManager_TT").GetComponent<TabletopInitialization>().sessionID);
+		var methodCall = Meteor.Method<ChannelResponse>.Call ("endTabletopSession", GameObject.Find ("GameManager").GetComponent<TabletopInitialization>().sessionID);
 		yield return (Coroutine)methodCall;
-		//reset the scene, make visual indicator
+	}
+
+
+
+
+	public IEnumerator ShakeCamera(float innerDuration = 0.02f, int iterations = 10) {
+		Vector3 newPos;
+		Vector3 cameraSetPosition = mainCamera.transform.position;
+		newPos = mainCamera.transform.position;
+		Debug.Log (newPos.ToString ());
+
+		for (int i = 0; i < iterations; i++) {
+
+			newPos.x = Mathf.PerlinNoise (newPos.x * minPerlin, newPos.x * maxPerlin) - 0.5f;
+			newPos.y = Mathf.PerlinNoise (newPos.y * minPerlin, newPos.y * maxPerlin) - 0.5f;
+			camera.transform.position = newPos;
+
+			yield return new WaitForSeconds (innerDuration);
+		}
+
+		camera.transform.position = cameraSetPosition;
+
+		yield return null;
+	}
+
+
+	public void createMsgLog(string message, float timer = 2f){
+		if(msgCanvas.transform.FindChild("mesg")){
+			msgCanvas.transform.FindChild("mesg").GetComponent<selfDestructMessage>().killMyself(message, timer);
+		}
+		else{
+			Text newText = Instantiate (msgPrefab) as Text;
+			newText.transform.position.Set (0, 0, 0);
+			newText.transform.SetParent(msgCanvas.transform);
+			newText.gameObject.name = "mesg";
+			newText.GetComponent<selfDestructMessage> ().killMyself (message, timer);
+		}
+	}
+
+	//creates walls so balls can't escape world
+	public void CreateBoundaries() {
+
+		float DistanceFromCamera = 30.0f;
+		float BoundariesHeight = 50.0f;
+
+		Vector3 lowerLeft = mainCamera.ViewportToWorldPoint (new Vector3 (0, 0, DistanceFromCamera));
+		Vector3 lowerRight = mainCamera.ViewportToWorldPoint (new Vector3 (1, 0, DistanceFromCamera));
+		Vector3 upperLeft = mainCamera.ViewportToWorldPoint (new Vector3 (0, 1, DistanceFromCamera));
+		Vector3 upperRight = mainCamera.ViewportToWorldPoint (new Vector3 (1, 1, DistanceFromCamera));
+
+		float width = lowerRight.x - lowerLeft.x;
+		float height = upperRight.z - lowerRight.z; 
+
+
+		Vector3 bottom = (lowerLeft + lowerRight ) / 2;
+		Vector3 top = (upperLeft + upperRight ) / 2;
+		Vector3 left = (upperLeft + lowerLeft ) / 2;
+		Vector3 right = (lowerRight + upperRight ) / 2;
+
+
+		GameObject bottomBound = GameObject.CreatePrimitive(PrimitiveType.Cube);
+		bottomBound.transform.position = bottom;
+		bottomBound.transform.localScale = new Vector3 (width, BoundariesHeight, 0.1f);
+
+		GameObject topBound = GameObject.CreatePrimitive(PrimitiveType.Cube);
+		topBound.transform.position = top;
+		topBound.transform.localScale = new Vector3 (width, BoundariesHeight, 0.1f);
+
+		GameObject leftBound = GameObject.CreatePrimitive(PrimitiveType.Cube);
+		leftBound.transform.position = left;
+		leftBound.transform.localScale = new Vector3 (0.1f, BoundariesHeight, height);
+
+		GameObject rightBound = GameObject.CreatePrimitive(PrimitiveType.Cube);
+		rightBound.transform.position = right;
+		rightBound.transform.localScale = new Vector3 (0.1f, BoundariesHeight, height);
+
+
+
+		//make boundaries invisible
+		Destroy(bottomBound.GetComponent<MeshRenderer>());
+		Destroy(bottomBound.GetComponent<MeshCollider>());
+
+		Destroy(topBound.GetComponent<MeshRenderer>());
+		Destroy(topBound.GetComponent<MeshCollider>());
+
+		Destroy(leftBound.GetComponent<MeshRenderer>());
+		Destroy(leftBound.GetComponent<MeshCollider>());
+
+		Destroy(rightBound.GetComponent<MeshRenderer>());
+		Destroy(rightBound.GetComponent<MeshCollider>());
 	}
 }
