@@ -1,0 +1,331 @@
+{
+  "figure-placement":{
+    "map":"river1",
+    "figures":[
+      { "id":1,"position":[0,0] },
+      { "id":1,"position":[0,0] },
+      { "id":1,"position":[0,0] }
+    ]
+  },
+  "actors":[
+    {
+      "id":1,
+      "controller":"P1",
+      "name":"Conan",
+      "class":"Barbarian",
+      "HP":105,
+      "actions":[
+        {
+          "name":"Greatsword, Melee",
+          "hit_modifier":8,
+          "range":5,
+          "target":1,
+          "targets":[
+            {"id":4},{"id":5}
+          ],
+          "effects":[
+            {
+              "types":["damage","physical","slashing"],
+              "value": {"count":2,"die":6,"mod":4},
+              "classes":["melee-weapon","greatsword"]
+            }
+          ]
+        },
+        {
+          "name":"Handaxe, Melee",
+          "hit_modifier":8,
+          "range":5,
+          "target":1,
+          "targets":[
+            {"id":4},{"id":5}
+          ],
+          "effects":[
+            {
+              "types":["damage","physical","slashing"],
+              "value": {"count":1,"die":6,"mod":4},
+              "classes":["melee-weapon","handaxe"]
+            }
+          ]
+        },
+        {
+          "name":"Handaxe, Ranged",
+          "hit_modifier":8,
+          "range":[20,60],
+          "target":1,
+          "classes":["ranged-weapon","handaxe"],
+          "effects":[
+            {
+              "types":["damage","physical","slashing"],
+              "value": {"count":1,"die":6,"mod":4},
+
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id":2,
+      "controller":"P2",
+      "name":"Tobias",
+      "class":"Sorceror",
+      "HP":72,
+      "actions":[
+        {
+          "type":"normal",
+          "name":"Cone of Cold",
+          "hit_modifier":9,
+          "range":60,
+          "target":"cone",
+          "effects":[
+            {
+              "types":["damage","magical","cold"],
+              "value": {"count":8,"die":8,"mod":0},
+              "saving_throw":19,
+              "on_save": {"mult":0.5}
+            }
+          ]
+
+        },
+        {
+          "type":"normal",
+          "name":"Magic Missile",
+          "hit_modifier":9,
+          "range":120,
+          "target":3,
+          "targets":[
+            {"id":4},{"id":5}
+          ],
+          "effects":[
+            {
+              "types":["damage","magical"],
+              "value": {"count":1,"die":4,"mod":1}
+            }
+          ]
+
+        },
+        {
+          "name":"Scorching Ray",
+          "hit_modifier":9,
+          "range":120,
+          "target":1,
+          "targets":[
+            {"id":4},{"id":5}
+          ],
+          "effects":[
+            {
+              "types":["damage","magical","fire"],
+              "value": {"count":2,"die":6,"mod":0}
+            }
+          ]
+
+        },
+        {
+          "type":"reaction",
+          "name":"Shield",
+          "hit_modifier":9,
+          "range":0,
+          "target":"self",
+          "effects":[
+            {
+              "types":["AC","bonus"],
+              "value": {"mod":6},
+              "duration":{ "value":1,"unit":"round"}
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id":3,
+      "controller":"P3",
+      "name":"Tobias",
+      "class":"Cleric",
+      "HP":93,
+      "actions":[
+        {
+          "name":"Handaxe, Melee",
+          "hit_modifier":8,
+          "range":5,
+          "target":1,
+          "targets":[
+            {"id":4},{"id":5}
+          ],
+          "effects":[
+            {
+              "types":["damage","physical","slashing"],
+              "value": {"count":1,"die":6,"mod":2},
+              "classes":["melee-weapon","handaxe"]
+            }
+          ]
+        },
+        {
+          "name":"Handaxe, Ranged",
+          "hit_modifier":8,
+          "range":[60],
+          "target":1,
+          "targets":[
+            {"id":4},{"id":5}
+          ],
+          "classes":["ranged-weapon","handaxe"],
+          "effects":[
+            {
+              "types":["damage","physical","slashing"],
+              "value": {"count":1,"die":6,"mod":2},
+
+            }
+          ]
+        },
+        {
+          "name":"Warhammer",
+          "hit_modifier":6,
+          "range":5,
+          "target":1,
+          "targets":[
+            {"id":4},{"id":5}
+          ],
+          "effects":[
+            {
+              "types":["damage","physical","bludgeoning"],
+              "value": {"count":1,"die":8,"mod":2},
+              "classes":["melee-weapon","warhammer"]
+            }
+          ]
+        },
+        {
+          "name":"Mass Cure Wounds",
+           "hit_modifier":8,
+          "range":[60],
+          "targets":[1,6],
+          "targets_pending":true,
+          "targets":[
+            {"id":1},{"id":2},{"id":3}
+          ],
+          "target_type":["sphere",30],
+          "classes":["spell","healing"],
+          "effects":[
+            {
+              "types":["healing","magical"],
+              "value": {"count":3,"die":8,"mod":4},
+
+            }
+          ]
+
+        },
+        {
+          "name":"Flame Strike",
+           "hit_modifier":8,
+          "range":[60],
+          "targets":0,
+          "target_type":["cylinder",10,40],
+          "classes":["spell","flame-strike"],
+          "effects":[
+            {
+              "types":["damage","magical","fire"],
+              "value": {"count":4,"die":6}
+            },
+            {
+              "types":["damage","magical","radiant"],
+              "value": {"count":4,"die":6}
+            }
+          ]
+        }
+
+      ]
+    },
+    {
+      "id":4,
+      "controller":"GM",
+      "name":"Fire Elemental",
+      "class":"Elemental",
+      "HP":102,
+      "actions":[
+        {
+          "name":"Fire Touch",
+          "id":"fire-touch",
+          "hit_modifier":8,
+          "range":5,
+          "target":1,
+          "targets":[
+            {"id":1},{"id":2},{"id":3}
+          ],
+          "description":"Multiattack. The elemental makes two touch attacks.",
+          "notes":"If the target is a creature or flammable object, it ignites.",
+          "effects":[
+            {
+              "types":["damage","fire"],
+              "value": {"count":2,"die":6,"mod":3},
+              "classes":["melee-weapon","handaxe"]
+            },
+            {
+              "types":["damage","fire","condition"],
+              "name":"Burning",
+              "value": {"count":1,"die":10},
+              "duration":"continuous",
+              "description":"Remove this condition by taking an action to douse"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id":5,
+      "controller":"GM",
+      "name":"Young Black Dragon",
+      "class":"Dragon",
+      "HP":102,
+      "actions":[
+        {
+          "name":"Acid Breath",
+          "id":"fire-touch",
+          "hit_modifier":8,
+          "range":5,
+          "target":0,
+          "target_type":["line",30,5],
+          "effects":[
+            {
+              "types":["damage","acid"],
+              "value": {"count":11,"die":8,"auto":49,},
+              "classes":["breath"],
+              "saving_throw":["DEX",14],
+              "on_save":{"mult":0.5}
+            }
+          ]
+        },
+        {
+          "name":"Claw",
+          "id":"claw",
+          "hit_modifier":7,
+          "range":5,
+          "target":1,
+          "targets":[
+            {"id":1},{"id":2},{"id":3}
+          ],
+          "effects":[
+            {
+              "types":["damage","slashing"],
+              "value":{"count":2,"die":6,"mod":4}
+            }
+          ]
+
+        },
+        {
+          "name":"Bite",
+          "id":"bite",
+          "hit_modifier":7,
+          "range":5,
+          "target":1,
+          "targets":[
+            {"id":1},{"id":2},{"id":3}
+          ],
+          "effects":[
+            {
+              "types":["damage","piercing"],
+              "value":{"count":2,"die":10,"mod":4}
+            }
+          ]
+        }
+      ]
+    }
+  ],
+
+}

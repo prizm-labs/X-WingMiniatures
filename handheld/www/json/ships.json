@@ -1,0 +1,337 @@
+{
+  "ships":[
+    {
+      "name":"YT-1300",
+      "faction":"rebel",
+      "isStressed":false,
+      "actions":["focus","targetLock"],
+      "manuevers":[
+        { "speed":1,"direction":"bankLeft","difficulty":0 },
+        { "speed":1,"direction":"bankRight","difficulty":0 },
+        { "speed":2,"direction":"bankLeft","difficulty":1 },
+        { "speed":2,"direction":"bankRight","difficulty":1 },
+        { "speed":3,"direction":"bankLeft","difficulty":1 },
+        { "speed":3,"direction":"bankRight","difficulty":1 },
+        { "speed":1,"direction":"turnLeft","difficulty":1 },
+        { "speed":1,"direction":"turnRight","difficulty":1 },
+        { "speed":2,"direction":"turnLeft","difficulty":1 },
+        { "speed":2,"direction":"turnRight","difficulty":1 },
+        { "speed":1,"direction":"straight","difficulty":0 },
+        { "speed":2,"direction":"straight","difficulty":0 },
+        { "speed":3,"direction":"straight","difficulty":1 },
+        { "speed":4,"direction":"straight","difficulty":1 },
+        { "speed":3,"direction":"kTurn","difficulty":2 },
+        { "speed":4,"direction":"kTurn","difficulty":2 }
+      ],
+      "currentShield":0,
+      "currentHull":0,
+      "damage":[],
+      "selectedManuever":null,
+      "selectedAction":null,
+      "selectedPilot":null,
+      "selectedUpgrades":[],
+
+      "pilots":[
+        {
+          "name":"Han Solo",
+          "weapon":3,
+          "agility":1,
+          "hull":8,
+          "shield":5,
+          "ability":"When attacking, you may reroll all of your dice. If you choose to do so, you must reroll as many of your dice as possible.",
+          "isUnique":true,
+          "cost":46,
+          "skill":9,
+          "upgrades":["missile","crew","crew","title","modification","elitePilotTalent"]
+        },
+        {
+          "name":"Lando Calrissian",
+          "weapon":3,
+          "agility":1,
+          "hull":8,
+          "shield":5,
+          "ability":"After you execute a green manoeuvre, choose one other friendly ship at Range 1. That ship may perform 1 free action on its action bar.",
+          "isUnique":true,
+          "cost":44,
+          "skill":7,
+          "upgrades":["missile","crew","crew","title","modification","elitePilotTalent"]
+        },
+        {
+          "name":"Chewbacca",
+          "weapon":3,
+          "agility":1,
+          "hull":8,
+          "shield":5,
+          "ability":"When you are dealt a faceup damage card, immediately flip it facedown (without resolving its ability).",
+          "isUnique":true,
+          "cost":42,
+          "skill":7,
+          "upgrades":["missile","crew","crew","title","modification","elitePilotTalent"]
+        }
+      ]
+    },
+    {
+      "name":"X-Wing",
+      "faction":"rebel",
+      "isStressed":false,
+      "actions":["focus","targetLock"],
+      "manuevers":[
+        { "speed":1,"direction":"bankLeft","difficulty":0 },
+        { "speed":1,"direction":"bankRight","difficulty":0 },
+        { "speed":2,"direction":"bankLeft","difficulty":1 },
+        { "speed":2,"direction":"bankRight","difficulty":1 },
+        { "speed":3,"direction":"bankLeft","difficulty":1 },
+        { "speed":3,"direction":"bankRight","difficulty":1 },
+        { "speed":1,"direction":"straight","difficulty":0 },
+        { "speed":2,"direction":"straight","difficulty":0 },
+        { "speed":2,"direction":"turnLeft","difficulty":1 },
+        { "speed":2,"direction":"turnRight","difficulty":1 },
+        { "speed":3,"direction":"turnLeft","difficulty":1 },
+        { "speed":3,"direction":"turnRight","difficulty":1 },
+        { "speed":3,"direction":"straight","difficulty":1 },
+        { "speed":4,"direction":"straight","difficulty":1 },
+        { "speed":4,"direction":"kTurn","difficulty":2 }
+      ],
+      "damage":[],
+      "selectedManuever":null,
+      "selectedAction":null,
+      "selectedPilot":null,
+      "selectedUpgrades":[],
+
+      "pilots":[
+        {
+          "name":"Wedge Antilles",
+          "ability":"When attacking, reduce the defender's agility value by 1 (to a minimum of 0).",
+          "isUnique":true,
+          "cost":29,
+          "skill":9,
+          "weapon":3,
+          "agility":2,
+          "hull":3,
+          "shield":2,
+          "upgrades":["astromechDroid","torpedo","modification","elitePilotTalent"]
+        },
+        {
+          "name":"Luke Skywalker",
+          "ability":"When defending, you may change 1 of your {{focus}} results to a {{evade}} result.",
+          "isUnique":true,
+          "cost":28,
+          "skill":8,
+          "weapon":3,
+          "agility":2,
+          "hull":3,
+          "shield":2,
+          "upgrades":["astromechDroid","torpedo","modification","elitePilotTalent"]
+        }
+      ]
+    },
+
+    {
+      "name":"Tie Fighter",
+      "faction":"empire",
+      "isStressed":false,
+      "actions":["focus","evade","barrellRoll"],
+      "manuevers":[
+        { "speed":2,"direction":"bankLeft","difficulty":0 },
+        { "speed":3,"direction":"bankLeft","difficulty":1 },
+        { "speed":2,"direction":"bankRight","difficulty":0 },
+        { "speed":3,"direction":"bankRight","difficulty":1 },
+        { "speed":2,"direction":"straight","difficulty":0 },
+        { "speed":3,"direction":"straight","difficulty":1 },
+        { "speed":4,"direction":"straight","difficulty":1 },
+        { "speed":5,"direction":"straight","difficulty":1 },
+        { "speed":1,"direction":"turnLeft","difficulty":1 },
+        { "speed":1,"direction":"turnRight","difficulty":1 },
+        { "speed":2,"direction":"turnLeft","difficulty":1 },
+        { "speed":2,"direction":"turnRight","difficulty":1 },
+        { "speed":3,"direction":"turnLeft","difficulty":1 },
+        { "speed":3,"direction":"turnRight","difficulty":1 },
+        { "speed":4,"direction":"kTurn","difficulty":2 },
+        { "speed":4,"direction":"kTurn","difficulty":2 }
+      ],
+      "selectedManuever":null,
+      "selectedAction":null,
+      "selectedPilot":null,
+      "selectedUpgrades":[],
+      "pilots":[
+        {
+          "name":"\"Howlrunner\"",
+          "skill":8,
+          "weapon":2,
+          "agility":3,
+          "hull":3,
+          "shield":0,
+          "ability":"When another friendly ship at Range 1 is attacking with its primary weapon, it may reroll 1 attack die.",
+          "isUnique":true,
+          "cost":18
+        },
+        {
+          "name":"\"Scourge\"",
+          "skill":8,
+          "weapon":2,
+          "agility":3,
+          "hull":3,
+          "shield":0,
+          "ability":"When attacking a defender that has 1 or more Damage cards, roll 1 additional attack die.",
+          "isUnique":true,
+          "cost":17
+        }
+      ]
+    },
+    {
+      "name":"Tie Advanced",
+      "faction":"empire",
+      "isStressed":false,
+      "actions":["focus","targetLock","evade","barrellRoll"],
+      "manuevers":[
+        { "speed":1,"direction":"bankLeft","difficulty":0 },
+        { "speed":1,"direction":"bankRight","difficulty":0 },
+        { "speed":2,"direction":"bankLeft","difficulty":1 },
+        { "speed":3,"direction":"bankLeft","difficulty":1 },
+        { "speed":2,"direction":"bankRight","difficulty":1 },
+        { "speed":3,"direction":"bankRight","difficulty":1 },
+        { "speed":2,"direction":"straight","difficulty":0 },
+        { "speed":3,"direction":"straight","difficulty":1 },
+        { "speed":4,"direction":"straight","difficulty":1 },
+        { "speed":5,"direction":"straight","difficulty":1 },
+        { "speed":1,"direction":"turnLeft","difficulty":1 },
+        { "speed":1,"direction":"turnRight","difficulty":1 },
+        { "speed":2,"direction":"turnLeft","difficulty":1 },
+        { "speed":2,"direction":"turnRight","difficulty":1 },
+        { "speed":3,"direction":"turnLeft","difficulty":1 },
+        { "speed":3,"direction":"turnRight","difficulty":1 },
+        { "speed":4,"direction":"kTurn","difficulty":2 },
+        { "speed":4,"direction":"kTurn","difficulty":2 }
+      ],
+      "selectedManuever":null,
+      "selectedAction":null,
+      "selectedPilot":null,
+      "selectedUpgrades":[],
+      "pilots":[
+        {
+          "name":"Darth Vader",
+          "skill":9,
+          "weapon":2,
+          "agility":3,
+          "hull":3,
+          "shield":2,
+          "ability":"During your \"Perform Action\" step, you may perform 2 actions.",
+          "isUnique":true,
+          "cost":29,
+          "upgrades":["title","missle","elitePilotTalent","modification"]
+        },
+        {
+          "name":"Juno Eclipse",
+          "skill":8,
+          "weapon":2,
+          "agility":3,
+          "hull":3,
+          "shield":2,
+          "ability":"When you reveal your manoeuvre, you may increase or decrease its speed by 1 (to a minimum of 1).",
+          "isUnique":true,
+          "cost":28,
+          "upgrades":["title","missle","elitePilotTalent","modification"]
+        }
+      ]
+    }
+  ],
+  "upgrades":[
+    {
+      "name":"R2-D2",
+      "type":"astromechDroid",
+      "cost":4,
+      "ability":"After executing a green manoeuvre, you may recover one shield (up to your shield value).",
+      "isUnique":true
+    },
+    {
+      "name":"R7 Astromech",
+      "type":"astromechDroid",
+      "cost":2,
+      "ability":"Once per round when defending, if you have a target lock on the attacker, you may spend the target lock to choose any or all attack dice. The attacker must reroll the chosen dice.",
+      "isUnique":true
+    },
+    {
+      "name":"BB-8",
+      "type":"astromechDroid",
+      "cost":2,
+      "ability":"When you reveal green manoeuvre, you may perform a free barrel roll.",
+      "isUnique":true
+    },
+
+    {
+      "name":"Proton Rockets",
+      "type":"missile",
+      "cost":3,
+      "ability":"Attack [Focus]: Discard this card to perform this attack. You may roll additional attack dice equal to your agility value, to a maximum of 3 additional dice. Attack value: 2. Range: 1.",
+      "isUnique":true
+    },
+    {
+      "name":"Concussion Missiles",
+      "type":"missile",
+      "cost":4,
+      "ability":"Attack [Target Lock]: Spend your Target Lock and discard this card to perform this attack. You may change 1 of your blank results to a  result. Attack value: 4. Range: 2-3.",
+      "isUnique":true
+    },
+
+    {
+      "name":"Proton Torpedoes",
+      "type":"torpedo",
+      "cost":4,
+      "isUnique":true,
+      "ability":"Attack [Target Lock]: Spend your target lock and discard this card to perform this attack. You may change one of your {{focus}} results to a {{hit}} result. Attack value: 4. Range: 2-3."
+    },
+    {
+      "name":"Plasma Torpedoes",
+      "type":"torpedo",
+      "cost":3,
+      "isUnique":true,
+      "ability":"Attack [Target Lock]: Spend your target lock and discard this card to perform this attack. If this attack hits, after dealing damage, remove 1 shield token from the defender. Attack value: 4. Range 2-3."
+    },
+
+    {
+      "name":"Blaster Turret",
+      "type":"turretWeapon",
+      "cost":4,
+      "isUnique":true,
+      "ability":"Attack (Focus): Spend 1 focus token to perform this attack against 1 ship (even a ship outside your firing arc). Attack value: 3. Range: 1-2."
+    },
+    {
+      "name":"Twin Laser Turret",
+      "type":"turretWeapon",
+      "cost":6,
+      "isUnique":true,
+      "ability":"Attack: Perform this attack twice (even against a ship outside your firing arc). Each time this attack hits, the defender suffers 1 damage. Then cancel all dice results. Attack: 3. Range: 2-3."
+    },
+
+    {
+      "name":"Stealth Device",
+      "type":"modification",
+      "cost":3,
+      "isUnique":true,
+      "ability":"Increase your agility value by 1. If you are hit by an attack, discard this card."
+    },
+    {
+      "name":"Munitions Failsafe",
+      "type":"modification",
+      "cost":1,
+      "isUnique":true,
+      "ability":"When attacking with a secondary weapon that instructs you to discard it to perform the attack, do not discard it unless the attack hits."
+    },
+
+
+    {
+      "name":"Veteran Instincts",
+      "type":"elitePilotTalent",
+      "cost":2,
+      "isUnique":true,
+      "ability":"Increase your pilot skill value by 2."
+    },
+    {
+      "name":"Marksmanship",
+      "type":"elitePilotTalent",
+      "cost":3,
+      "isUnique":true,
+      "ability":"Action: When attacking this round, you may change one of your {{focus}} results to a {{critHit}} result and all your other {{focus}} results to {{hit}} results."
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+<ion-modal-view class="product edit create" ng-controller="LineAttkCtrl">
+  <ion-content>
+    <div class="row">
+      <div class="col">      </div>
+      <div class="col"><a ng-class="classUp" ng-click="ChooseAttack('chooseUp')" class="button button-block icon ion-arrow-up-a direction"></a></div>
+      <div class="col">      </div>
+    </div>
+
+    <div class="row">
+      <div class="col"><a ng-class="classLeft" ng-click="ChooseAttack('chooseLeft')" class="button button-block icon ion-arrow-left-a direction"></a></div>
+      <div class="col">      </div>
+      <div class="col"><a ng-class="classRight" ng-click="ChooseAttack('chooseRight')" class="button button-block icon ion-arrow-right-a direction"></a></div>
+    </div>
+
+    <div class="row">
+      <div class="col">      </div>
+      <div class="col"><a ng-class="classDown" ng-click="ChooseAttack('chooseDown')" class="button button-block icon ion-arrow-down-a direction"></a></div>
+      <div class="col">      </div>
+    </div>
+
+   <div id="finalize">
+     <button class="button button-outline button-positive" ng-click="CancelAttack()">
+       Cancel Attack
+     </button>
+    <button class="button button-outline button-assertive" ng-click="LaunchAttack()">
+      Finalize Attack!!
+    </button>
+  </div>
+  </ion-content>
+</ion-modal-view>

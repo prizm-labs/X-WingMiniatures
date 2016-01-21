@@ -1,0 +1,21 @@
+{
+  "name": "HelloIonic",
+  "private": "true",
+  "devDependencies": {
+    "ionic": "driftyco/ionic-bower#1.2.4"
+  },
+  "dependencies": {
+    "jquery": "*",
+    "gsap": "*",
+    "hammerjs": "~2.0.6",
+    "phaser": "~2.4.4",
+    "inobounce": "~0.1.2",
+    "asteroid": "*",
+    "angular-socket-io": "~0.7.0",
+    "q": "*",
+    "chance": "*",
+    "lodash": "~4.0.0",
+    "jqueryui-touch-punch": "*",
+    "jquery-knob": "~1.2.13"
+  }
+}

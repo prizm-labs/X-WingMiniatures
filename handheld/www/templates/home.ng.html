@@ -1,0 +1,65 @@
+<ion-view hide-nav-bar="true" class="pane" style="background: url('img/forest_background.jpg') no-repeat center center fixed;background-size:cover;" view-title="Attacks" ng-controller="SpellTabCtrl as STC">
+  <ion-content>
+    <div>
+      <div class="row">
+        <div class="col-50" ng-controller="PlayerCtrl">
+          <div class="row">
+            <div class="col text-center">
+              <p style="font-size:45px;color:white;text-outline:'5px 5px #FF0000';"> <strong> {{playerName}} </strong></p>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col text-center">
+              <p style="font-size:20px;color:white;"> <strong> {{playerClass}} </strong> </p>
+            </div>
+          </div>
+
+          <div class="row" style="position:relative;width:'100%';margin:auto;left:10px;">
+            <div style="position:absolute;left:10px;top:10px">
+              <input class="meter healthMeter" data-bgColor="#333" data-fgColor="#66CC66" data-displayInput=false data-width="300" data-height="300" data-thickness=".3">
+            </div>
+            <div style="position:absolute;left:60px;top:60px">
+              <input class="meter manaMeter" data-bgColor="#333" data-displayInput=false data-width="200" data-height="200" data-thickness=".45">
+            </div>
+            <div style="position:absolute;left:110px;top:110px">
+              <img src="img/rogue_portrait.jpg" alt="oopsies" height="180" width="160" class="portrait">
+            </div>
+          </div>
+
+          <div class="row" style="background:#A9A9A9;margin-top:250px">
+            <div class="col text-center" style="background:blanchedalmond">
+              Health: {{playerHP}} <br>
+              Mana: {{playerMP}}
+            </div>
+          </div>
+        </div>
+
+        <div class="col-50">
+          <div class="row" ng-repeat="spell in spells | filter:filterSpells">
+            <div class="col">
+              <a class="button button-block icon icon-right ion-chevron-right rust" ng-click="openModal(spell.targetingPattern)">
+                <img ng-src={{spell.imgSrc}} alt="rogue_portrait" height=100 width=100>
+                <strong> {{spell.name}} </strong> <br>
+                Value: {{spell.effects[0].value.count}} x D{{spell.effects[0].value.die}} + {{spell.effects[0].value.mod}} <br>
+                Type: <i>{{spell.effects[0].types[0]}}: {{spell.effects[0].types[1]}}</i> <i ng-show="spell.effects[0].types[2]"> / {{spell.effects[0].types[2]}} </i>
+                <p ng-show="spell.effects[0].saving_throw"> Saving throw: {{spell.effects[0].saving_throw}} </p>
+                <p ng-show="spell.description"> Description: {{spell.description}} </p>
+              </a>
+            </div>
+            <!-- <div class="col" ng-show=spells[spell._index+1]>
+              <a class="button button-block icon icon-right ion-chevron-right rust" ng-click="openModal(spells[spell._index+1].targetingPattern)">
+                <img ng-src={{spells[spell._index+1].imgSrc}} alt="rogue_portrait" height=100 width=100>
+                <strong> {{spells[spell._index+1].name}} </strong> <br>
+                Value: {{spells[spell._index+1].effects[0].value.count}} x D{{spells[spell._index+1].effects[0].value.die}} + {{spells[spell._index+1].effects[0].value.mod}} <br>
+                Type: <i>{{spells[spell._index+1].effects[0].types[0]}}: {{spells[spell._index+1].effects[0].types[1]}}</i> <i ng-show="spells[spell._index+1].effects[0].types[2]"> / {{spells[spell._index+1].effects[0].types[2]}} </i>
+                <p ng-show="spells[spell._index+1].effects[0].saving_throw"> Saving throw: {{spells[spell._index+1].effects[0].saving_throw}} </p>
+                <p ng-show="spells[spell._index+1].description"> Description: {{spells[spell._index+1].description}} </p>
+              </a>
+            </div> -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </ion-content>
+</ion-view>

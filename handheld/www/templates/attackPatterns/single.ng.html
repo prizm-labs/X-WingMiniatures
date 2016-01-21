@@ -1,0 +1,30 @@
+<ion-modal-view>
+    <ion-content>
+      <div class="list">
+        <div class="item item-divider">
+          You are targeting: <strong>{{ selected.name }}</strong>
+        </div>
+      <ion-radio ng-repeat="target in availableTargets"
+               ng-value="target.name"
+               ng-model="selected.name"
+               name="targets">
+        <div class="row">
+         <div class="col col-25">
+           <img ng-src={{target.imgSrc}} alt="Pic Here" width=100 height=100>
+         </div>
+         <div class="col col-center">
+           <strong> {{ target.name }} </strong>  <br> has HP: <i> {{target.hp}} </i>
+         </div>
+        </div>
+     </ion-radio>
+     </div>
+     <div id="finalize">
+       <button class="button button-outline button-positive" ng-click="CancelAttack()">
+         Cancel Attack
+       </button>
+      <button class="button button-outline button-assertive" ng-click="LaunchAttack()">
+        Finalize Attack!!
+      </button>
+    </div>
+  </ion-content>
+</ion-modal-view>

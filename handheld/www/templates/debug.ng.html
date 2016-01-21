@@ -1,0 +1,32 @@
+  <ion-view view-title="About">
+    <ion-content class="padding">
+      <h3>Send commands to tabletop </h3>
+      <p><strong> character-data: </strong>
+        <div class="row" ng-repeat="(index,character) in characters">
+          <button ng-click="sendCharacterData(index)">{{character.class}}</button>
+        </div>
+      </p>
+      <p><strong> character-select: </strong>
+        <div class="row" ng-repeat="(index,character) in characters">
+          <button ng-click="chooseCharacter(index)">{{character.class}}</button>
+        </div>
+      </p>
+      <p ng-if="selectedCharacter"><strong> start-turn: </strong>
+        <button ng-click="startTurn()">Start {{selectedCharacter.class}}'s turn</button>
+      </p>
+      <p><strong> ability-select: </strong>
+        <div class="row" ng-repeat="ability in selectedCharacter.abilities">
+          <button ng-click="sendAbilitySelection(ability)">Activate {{ability}}</button>
+        </div>
+      </p>
+      <p ng-if="selectedAbility"><strong> target-select:  </strong>
+        <button ng-click="sendSingleTargetSelection()">???</button>
+      </p>
+      <p ng-if="selectedAbility"><strong> ability-cancel: </strong>
+        <button ng-click="sendAbilityCancellation()">Cancel {{selectedAbility}}</button>
+      </p>
+      <p ng-if="targetSelected"><strong> target-confirm: </strong>
+        <button ng-click="sendTargetConfirmation()">Confirm {{selectedAbility}}</button>
+      </p>
+    </ion-content>
+  </ion-view>

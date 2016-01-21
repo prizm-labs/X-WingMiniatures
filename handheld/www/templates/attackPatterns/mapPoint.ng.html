@@ -1,0 +1,44 @@
+
+<ion-modal-view class="product edit create" ng-controller="MapPointCtrl">
+  <script>
+    jQuery(function() {
+      jQuery( "#selectable" ).selectable({
+        selected: function(event, ui) {
+    alert("Selected");
+},
+selecting: function(event, ui) {
+    alert("Selecting");
+}
+      });
+    });
+  </script>
+
+  <ion-content>
+    <div class="row">
+      <div class="col col-offset-10">
+        <ol id="selectable" ng-repeat="n in [0, 1, 2, 3]">
+          <li class="col ui-state-default"></li>
+          <li class="col ui-state-default"></li>
+          <li class="col ui-state-default"></li>
+          <li class="col ui-state-default"></li>
+        </ol>
+      </div>
+    </div>
+
+    <script>
+    console.log("jquery selectable runs");
+    jQuery("#selectable").selectable();
+    </script>
+
+    <div class="row">
+      <div id="finalize" class="col">
+        <button class="button button-outline button-positive" ng-click="CancelAttack()">
+          Cancel Attack
+        </button>
+       <button class="button button-outline button-assertive" ng-click="LaunchAttack()">
+         Finalize Attack!!
+       </button>
+      </div>
+    </div>
+  </ion-content>
+</ion-modal-view>
