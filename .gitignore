@@ -3,7 +3,7 @@
 # =============== #
 X-WingMiniatures/Temp/
 X-WingMiniatures/Library/
-X-WingMiniatures/Assets/
+X-WingMiniatures/Assets/*
 X-WingMiniatures/Builds/
 X-WingMiniatures/ProjectSettings/
 
@@ -42,5 +42,5 @@ multiscreen-server/
 # Don't Ignore #
 # ============ #
 
-X-WingMiniatures/Assets/!Scripts
-X-WingMiniatures/Assets/!Scenes
+!X-WingMiniatures/Assets/Scripts
+!X-WingMiniatures/Assets/Scenes
