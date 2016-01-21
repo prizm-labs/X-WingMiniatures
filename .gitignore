@@ -38,9 +38,11 @@ X-WingMiniatures/Thumbs.db
 multiscreen-server/
 
 
-# ============ #
-# Don't Ignore #
-# ============ #
+# ================= #
+# Scripts and Senes #
+# ================= #
 
 !X-WingMiniatures/Assets/Scripts
+X-WingMiniatures/Assets/Scripts/*.meta
 !X-WingMiniatures/Assets/Scenes
+X-WingMiniatures/Assets/Scenes/*.meta

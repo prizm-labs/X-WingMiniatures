@@ -7,19 +7,12 @@ using UnityEngine.UI;
 
 public enum GameState {
 	None,
-	SetupHexTilesNumberTokensAndHarbors, 
-	WaitingToRegisterAllPlayersViaMobile, 
-	DockPlayerCardsAndEstablishTurnOrder, 
-	PlaceInitialSettlementsAndRoads, 
-	PlayerTurn_RollPhase,
-	PlayerTurn_CollectBountyPhase,
-	PlayerTurn_TradePhase_Domestic,
-	PlayerTurn_TradePhase_Maritime,
-	PlayerTurn_BuildPhase,
-	PlayerTurn_BuyDevCards,
-	PlayerTurn_UseDevCard,
-	PlayerTurn_Robber_EveryOneReturnIfExceeding7,
-	PlayerTurn_Robber_RobOtherPlayer
+	WaitingForPlayersEnter, 
+	WaitingForPlayersChooseShip, 
+	PlanningPhase, 
+	ActivationPhase, 
+	CombatPhase,
+	EndPhase
 };
 
 
