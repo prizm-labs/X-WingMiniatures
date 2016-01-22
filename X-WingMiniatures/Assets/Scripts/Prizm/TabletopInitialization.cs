@@ -25,7 +25,7 @@ public class TabletopInitialization : MonoBehaviour {
 	Meteor.Collection<ChannelTemplate> channelCollection;	//how each client 'talks' to each other
 	Meteor.Collection<ClientTemplate> clientCollection;		//list of clients connected in session
 	Meteor.Collection<SessionTemplate> sessionCollection;	//keep track of session(s)
-	Meteor.Collection<PlayerSchema> playerCollection;		//list of players
+	public Meteor.Collection<PlayerSchema> playerCollection;		//list of players
 	
 	//subscriptions 
 	Meteor.Subscription channelSubscription;
@@ -114,8 +114,10 @@ public class TabletopInitialization : MonoBehaviour {
 		
 		playerCollection.DidAddRecord += (string arg1, PlayerSchema arg2) => {
 			var doc = arg2;
+			Debug.Log("player added to playercollection.  this is PSA from tabletopinitilization.cs");
 			if (doc.session_id == sessionID) {
-				GetComponent<GameManager>().CreateNewPlayer(doc);
+				//GetComponent<GameManager>().CreateNewPlayer(doc);
+				Debug.Log("belongs to us!");
 			}
 		};
 		
@@ -125,21 +127,9 @@ public class TabletopInitialization : MonoBehaviour {
 		////yield return StartCoroutine(GivePlayerStartingItems ());
 		Debug.Log ("Done with MeteorInit");
 	}
+		
 
-	//functions that show how to 'give' players objects
-	void giveShipToPlayer(Player ply, PrizmRecord<ShipSchema> shipRecord) {
-		
-		GameObject ship_obj = Instantiate (Resources.Load<GameObject> ("Ships/" + shipRecord.mongoDocument.name));
-		shipRecord.gameObject = ship_obj;
-		ship_obj.GetComponent<Ship> ().record = shipRecord;	//maybe this will work?
-		
-		ply.shipsUnderCommand.Add (ship_obj); 
-		ship_obj.transform.SetParent (ply.transform);
-		ship_obj.transform.position = gameManager.GetRandomSpawnPosition(ply.faction);		
-	}
-	
-//	public IEnumerator CreateAllResourceCardsAndDevelopmentCards(){
-	public IEnumerator LoadAvailableShipsIntoDatabase(){
+	public IEnumerator ConfigureShipDatabase(){
 		Debug.Log ("Loading all available ship configurations from configuration JSON");
 		shipRecordGroup = new PrizmRecordGroup<ShipSchema> (sessionID, "shipYard");
 		yield return StartCoroutine (shipRecordGroup.CreateMeteorCollection ());
@@ -196,7 +186,7 @@ public class TabletopInitialization : MonoBehaviour {
 	}
 	
 	
-	public IEnumerator LoadObstaclesIntoDatabase(){
+	public IEnumerator ConfigureObstacleDatabase(){
 		
 		Debug.Log ("Creating obstacles into database...");
 		//GameManager.Instance.GameStateReporter.text = "Game is creating DB records and\ndistributing all starting items to PLAYERS";
@@ -252,7 +242,7 @@ public class TabletopInitialization : MonoBehaviour {
 	}
 
 	//also probably read from a config.json file... u no wot? everything is json. there, i said it. everything is json here
-	public IEnumerator LoadUpgradesIntoDatabase(){
+	public IEnumerator ConfigureUpgradesDatabase(){
 
 		Debug.Log ("Creating upgrades into database...");
 		//GameManager.Instance.GameStateReporter.text = "Game is creating DB records and\ndistributing all starting items to PLAYERS";

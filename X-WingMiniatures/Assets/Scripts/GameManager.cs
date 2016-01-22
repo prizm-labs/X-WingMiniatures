@@ -51,10 +51,12 @@ public class GameManager : MonoBehaviour {
 	private GameObject playerManagerObject;
 
 	string jsonURL = "10.0.1.130:8000/ships.json";
-	JSONClass masterJSON;
+
+	[System.NonSerialized]
+	public JSONClass masterJSON;
 
 
-	float DistanceFromCamera = 30.0f;
+	float DistanceFromCamera = 100.0f;
 	float BoundariesHeight = 50.0f;
 
 
@@ -65,6 +67,9 @@ public class GameManager : MonoBehaviour {
 	private Slider playerNumSlider;
 	private Text playerNumUI;
 
+	public TabletopInitialization TT_Reference;
+	public PrizmRecordGroup<ShipSchema> shipRecordGroup;
+	Meteor.Collection<PlayerSchema> playerCollection;		//list of players
 
 
 	void Awake () {
@@ -87,6 +92,13 @@ public class GameManager : MonoBehaviour {
 		//comment this out when done working on main scene
 		InitializeGameManager();
 		MyGameState++;
+	}
+
+	void Start() {
+		TT_Reference = GetComponent<TabletopInitialization> ();
+		shipRecordGroup = TT_Reference.shipRecordGroup;
+		StartCoroutine (TT_Reference.ConfigureShipDatabase());
+		playerCollection = TT_Reference.playerCollection;
 	}
 
 	public void SetPlayerNum() {
@@ -155,7 +167,7 @@ public class GameManager : MonoBehaviour {
 
 		yield return new WaitForSeconds (1.0f);
 
-		intro3DText.GetComponent<Rigidbody> ().velocity = new Vector3 (0.0f, -0.5f, 1.0f);
+		intro3DText.GetComponent<Rigidbody> ().velocity = new Vector3 (0.0f, -5.0f, 5.0f);
 
 		yield return new WaitForSeconds (2.0f);
 
@@ -169,6 +181,60 @@ public class GameManager : MonoBehaviour {
 		bigBangStars.SetActive (false);
 		mainAudioSource.Stop();
 		intro3DText.SetActive (false);
+	}
+
+	void SetupRecordHandlers() {
+		playerCollection.DidAddRecord += (string arg1, PlayerSchema arg2) => {
+			var doc = arg2;
+			if (doc.session_id == TabletopInitialization.Instance.sessionID) {
+				Debug.Log("creating player record handled from gamemanager");
+				GetComponent<GameManager>().CreateNewPlayer(doc);
+			}
+		};
+
+		shipRecordGroup.didAddRecord += HandleDidAddShipRecord;
+	}
+
+	void HandleDidAddShipRecord (string arg1, ShipSchema arg2)
+	{
+		Debug.Log ("added ship: " + arg1);
+
+		//make a record on our side from the data received
+		PrizmRecord<ShipSchema> tempRecord = new PrizmRecord<ShipSchema> ();
+		tempRecord.mongoDocument = arg2;
+
+		//find the owner from the list
+		GameObject owner = playerList.Find (p => p.GetComponent<Player> ().playerID.Equals (arg2.owner));
+		Debug.Log ("faction before giving: " + owner.GetComponent<Player> ().faction);
+		//give the ship to the player
+		giveShipToPlayer (owner.GetComponent<Player>(), tempRecord);
+
+
+	}
+
+	//functions that show how to 'give' players objects
+	//instantiates ship and creates the game object from the shiprecord
+	void giveShipToPlayer(Player ply, PrizmRecord<ShipSchema> shipRecord) {
+		Debug.Log ("in giveshiptoplayer(), shiprecord: " + shipRecord.ToString ());
+		Debug.Log ("now, the schema: " + shipRecord.mongoDocument.ToString());
+		Debug.Log ("now, the list: " + shipRecord.mongoDocument.pilots.ToString ());
+
+		GameObject ship_obj = Instantiate (Resources.Load<GameObject> ("ShipPrefabs/" + shipRecord.mongoDocument.name));
+
+		shipRecord.gameObject = ship_obj;
+
+
+
+		//give database items
+		ship_obj.GetComponent<Ship> ().record = shipRecord;	//maybe this will work?
+
+		//give pilot
+		ship_obj.GetComponent<Ship>().GivePilot(shipRecord.mongoDocument.selectedPilot);
+
+		ply.shipsUnderCommand.Add (ship_obj); 
+		ship_obj.transform.SetParent (ply.transform);
+		Debug.Log ("faction: " + ply.faction);
+		ship_obj.transform.position = GetRandomSpawnPosition(ply.faction);		
 	}
 
 	void Update(){
@@ -188,10 +254,43 @@ public class GameManager : MonoBehaviour {
 			newPlay.name = "Donald Duck";
 			CreateNewPlayer (newPlay);
 		}
+		if (Input.GetKeyDown (KeyCode.A)) {
+			PlayerSchema newPlay = new PlayerSchema ();
+			newPlay.faction = "light";
+			newPlay.name = "Scotch Tape";
+			CreateNewPlayer (newPlay);
+		}
 
 
 		if (Input.GetKeyDown (KeyCode.Space)) {
 
+			ShipSchema tempShipData = new ShipSchema ();
+			tempShipData.name = "TieFighter";
+			tempShipData.faction = "light";
+			tempShipData.isStressed = false;
+			tempShipData.actions = new List<string> () { "focus", "targetLock" };
+			tempShipData.maneuvers = new List<string> () { "jesusTurn", "alley-yoop" };
+			tempShipData.hull = 2;
+			tempShipData.shield = 2;
+			tempShipData.owner = "Donald Duck";
+			tempShipData.selectedManeuver = "jesusTurn";
+			tempShipData.selectedAction = "focus";
+			tempShipData.cost = 1000;
+			tempShipData.agility = 10;
+			tempShipData.selectedPilot = "Chewbacca";
+			//Debug.LogError ("LOOK HERE" + masterJSON.ToString());
+			Debug.LogError ("finding pilots" + masterJSON["ships"] [0] ["pilots"].ToString());
+			tempShipData.pilots = masterJSON ["ships"] [0] ["pilots"].ToString();
+
+			Debug.Log ("tempdata's pilots : " + tempShipData.pilots);
+				
+						
+			PrizmRecord<ShipSchema> tempShipRecord = new PrizmRecord<ShipSchema> ();
+			tempShipRecord.mongoDocument = tempShipData;
+
+			Debug.Log ("player in list: " + playerList [0].ToString());
+			
+			giveShipToPlayer (playerList [(int)Random.Range(0, playerList.Count)].GetComponent<Player>(), tempShipRecord);
 		}
 
 	}
@@ -254,8 +353,9 @@ public class GameManager : MonoBehaviour {
 		//instantiate player prefab
 		GameObject newPlayer = Instantiate(playerPrefab) as GameObject;
 		newPlayer.GetComponent<Player> ().record.mongoDocument = playerToCreate;
+		newPlayer.GetComponent<Player> ().initializePlayer (playerToCreate.name, playerToCreate.faction, playerToCreate._id);
 
-		newPlayer.transform.SetParent (playerManagerObject);
+		newPlayer.transform.SetParent (playerManagerObject.transform);
 		playerList.Add (newPlayer);
 
 

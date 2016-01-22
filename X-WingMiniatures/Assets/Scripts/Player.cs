@@ -16,7 +16,7 @@ public class Player : MonoBehaviour {
 	private Rigidbody rb;
 
 	[System.NonSerialized]
-	public List<GameObject> shipsUnderCommand;
+	public List<GameObject> shipsUnderCommand = new List<GameObject>();
 
 	[System.NonSerialized]
 	public string faction;

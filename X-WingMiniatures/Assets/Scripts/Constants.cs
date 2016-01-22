@@ -35,6 +35,7 @@ public class PlayerSchema: MongoSchema {
 
 public class ShipSchema: MongoSchema {
 	public string name;
+	public string owner;
 	public int weapon;
 	public int agility;
 	public int shield;
@@ -55,7 +56,7 @@ public class ShipSchema: MongoSchema {
 		{ "speed":1,"direction":"left","difficulty":0 },
 	]
 	*/
-	public List<string> pilots;	//json array of json objects
+	public string pilots;	//json array of json objects
 	/*
 	 "pilots":[
        {
@@ -73,6 +74,7 @@ public class ShipSchema: MongoSchema {
 			{"key",key},
 			{"_GUID", _GUID},
 			{"name", name},
+			{"owner", owner},
 			{"weapon", weapon.ToString()},
 			{"agility", agility.ToString()},
 			{"shield", shield.ToString()},
