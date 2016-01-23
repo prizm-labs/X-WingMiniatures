@@ -151,7 +151,7 @@ public class Main : MonoBehaviour
     private void BezierInterpolate()
     {
         BezierPath bezierPath = new BezierPath();
-        bezierPath.Interpolate(points, .25f);
+        bezierPath.Interpolate(points, 0.25f);
 
         List<Vector3> drawingPoints = bezierPath.GetDrawingPoints2();
         

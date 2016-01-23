@@ -83,11 +83,11 @@ public class GameManager : MonoBehaviour {
 		StartCoroutine(LoadJsonFromServer ());
 
 		//uncomment this when done working on main scene
-		/*
-		playerNumSlider = GameObject.Find ("Slider").GetComponent<Slider> ();
-		playerNumUI = GameObject.Find ("Number").GetComponent<Text> ();
-		playerNumSlider.value = 0.25f;
-		*/
+
+		//playerNumSlider = GameObject.Find ("Slider").GetComponent<Slider> ();
+		//playerNumUI = GameObject.Find ("Number").GetComponent<Text> ();
+		//playerNumSlider.value = 0.25f;
+
 
 		//comment this out when done working on main scene
 		InitializeGameManager();
@@ -262,7 +262,7 @@ public class GameManager : MonoBehaviour {
 		}
 
 
-		if (Input.GetKeyDown (KeyCode.Space)) {
+		if (Input.GetKeyDown (KeyCode.S)) {
 
 			ShipSchema tempShipData = new ShipSchema ();
 			tempShipData.name = "TieFighter";

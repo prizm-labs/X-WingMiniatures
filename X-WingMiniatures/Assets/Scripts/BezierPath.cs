@@ -52,6 +52,8 @@ public class BezierPath
         controlPoints.Clear();
         controlPoints.AddRange(newControlPoints);
         curveCount = (controlPoints.Count - 1) / 3;
+		Debug.Log ("control points set: " + controlPoints.Count.ToString ());
+		Debug.Log ("CURVE COUNT SET: " + curveCount.ToString ());
     }
 
     /**
@@ -248,9 +250,13 @@ public class BezierPath
     {
         List<Vector3> drawingPoints = new List<Vector3>();
 
+		Debug.Log ("curve COUNT:  " + curveCount.ToString ());
+
         for (int curveIndex = 0; curveIndex < curveCount; curveIndex++)
         {
             List<Vector3> bezierCurveDrawingPoints = FindDrawingPoints(curveIndex);
+
+			Debug.Log ("in get drawingpoints2: " + FindDrawingPoints (curveIndex).ToString ());
 
             if (curveIndex != 0)
             {
