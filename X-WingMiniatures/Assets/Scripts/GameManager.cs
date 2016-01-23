@@ -94,12 +94,14 @@ public class GameManager : MonoBehaviour {
 		MyGameState++;
 	}
 
+	/*
 	void Start() {
 		TT_Reference = GetComponent<TabletopInitialization> ();
 		shipRecordGroup = TT_Reference.shipRecordGroup;
 		StartCoroutine (TT_Reference.ConfigureShipDatabase());
 		playerCollection = TT_Reference.playerCollection;
 	}
+	*/
 
 	public void SetPlayerNum() {
 		numPlayers =(int) (playerNumSlider.value * (float)maxNumPlayers + 1.0f);
@@ -230,6 +232,7 @@ public class GameManager : MonoBehaviour {
 
 		//give pilot
 		ship_obj.GetComponent<Ship>().GivePilot(shipRecord.mongoDocument.selectedPilot);
+		ship_obj.GetComponent<Ship> ().PlayerOwner = ply;
 
 		ply.shipsUnderCommand.Add (ship_obj); 
 		ship_obj.transform.SetParent (ply.transform);

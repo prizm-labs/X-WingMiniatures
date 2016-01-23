@@ -32,6 +32,15 @@ public class Ship : MonoBehaviour {
 	public static int steps = 10;	//how many microsteps to move the ship between each curve point (the more, the smoother)
 
 	[System.NonSerialized]
+	public static float attackRangeDelta = 10.0f;	//what is the radius of each attack field
+
+	[System.NonSerialized]
+	public bool taggedAsPotentialTarget = false;
+
+	List<GameObject> potentialAttackTargets = new List<GameObject>();
+
+
+	[System.NonSerialized]
 	public static float normalShipAltitude = 0.0f;
 
 	public void GivePilot(string pilotName) {
@@ -70,21 +79,90 @@ public class Ship : MonoBehaviour {
 			Debug.Log ("rolling dice");
 			RollDice ("defend", 2);
 		}
-		if (Input.GetKeyDown (KeyCode.Space)) {
+		if (Input.GetKeyDown (KeyCode.F)) {
 			Debug.Log ("Trying to draw bezier path for ship");
-			maneuverRoutine = ExecuteManeuver("{\"speed\":2,\"direction\":\"kTurn\",\"difficulty\":0");
+			maneuverRoutine = ExecuteManeuver("{\"speed\":1,\"direction\":\"turnLeft\",\"difficulty\":1");
 
 			StartCoroutine(maneuverRoutine);
 			//and then send signal to game manager that this ship is done, advance to next one.
 		}
 
 
-		if (Input.GetKeyDown (KeyCode.F)) {
-			lineRenderer.SetVertexCount (2);
-			lineRenderer.SetPosition (0, new Vector3 (0, 0, 0));
-			lineRenderer.SetPosition (1, new Vector3 (30, 30, 30));
-			lineRenderer.SetPosition (1, new Vector3 (20, 10, 0));
+		if (Input.GetKeyDown (KeyCode.Space)) {
+			StartCoroutine (ScanAttackRange ());
 		}
+	}
+
+	private IEnumerator ScanAttackRange() {
+		potentialAttackTargets.Clear ();
+
+
+		switch (playerOwner.faction) {
+
+		case "light":
+			lineRenderer.material = greenManeuverMaterialPrefab;
+			break;
+		case "dark":
+			lineRenderer.material = redManeuverMaterialPrefab;
+			break;
+		default:
+			lineRenderer.material = whiteManeuverMaterialPrefab;
+			break;
+		}
+
+		RaycastHit hit;
+		//shoots a raycast at every degree for 90 degrees
+		for (int j = 1; j < 4; j++) {
+			for (int i = (int) (transform.eulerAngles.y + 45); i > (int) (transform.eulerAngles.y - 45); i--) {
+				
+				//shoot the raycast
+				if (Physics.Raycast (transform.position, Quaternion.AngleAxis (i, Vector3.up) * Vector3.forward, out hit, j * attackRangeDelta)) {
+					Debug.DrawLine (transform.position, hit.point);
+					Debug.Log ("HIT SOMETHING! YAY1");
+					if (!hit.transform.gameObject.GetComponent<Ship> ().taggedAsPotentialTarget) {
+						hit.transform.gameObject.GetComponent<Ship> ().taggedAsPotentialTarget = true;
+						hit.transform.gameObject.GetComponent<Ship> ().ShowAsAvailableTarget ();
+
+						potentialAttackTargets.Add (hit.transform.gameObject);
+					}
+
+				}
+
+				//draw a line segment
+				lineRenderer.SetVertexCount(2);
+				lineRenderer.SetPosition (0, transform.position);
+				lineRenderer.SetPosition (1, (Quaternion.AngleAxis (i, Vector3.up) * Vector3.forward) * j * attackRangeDelta);
+
+				yield return new WaitForSeconds (0.01f);
+
+			}
+		}
+
+		Debug.Log ("Done scanning all attack ranges");
+		yield return new WaitForSeconds (0.1f);
+
+	}
+
+	//makes the material red (or probably just adds a particle effect)
+	public void ShowAsAvailableTarget() {
+		Debug.Log (this.name + "has been tagged");
+
+	}
+
+	//generates an explosion particle effect
+	public IEnumerator ShowExplosionDamage() {
+
+		return null;
+	}
+
+	public IEnumerator FireTorpedos(){
+	
+		return null;
+	}
+
+	public IEnumerator FireLazors() {
+
+		return null;
 	}
 
 	void OnCollisionEnter (Collision coll) {
@@ -147,6 +225,13 @@ public class Ship : MonoBehaviour {
 			Debug.LogError ("invalid difficulty: " + maneuverDetails ["difficulty"].AsInt.ToString ());
 			break;
 		}
+
+		if (stressTokens > 0) {
+			record.mongoDocument.isStressed = true;
+		} else {
+			record.mongoDocument.isStressed = false;
+		}
+		StartCoroutine (record.Sync ());
 
 		//get the points to draw and move along from maneuver cache
 		skeletonPoints = ManeuverCache.GetManeuverPoints(transform, maneuverDetails);
