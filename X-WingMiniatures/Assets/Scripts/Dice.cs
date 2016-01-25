@@ -36,7 +36,7 @@ public class Dice : MonoBehaviour {
 	[System.NonSerialized]
 	public Vector3 forceDirection = new Vector3(0, 1, 0);
 	[System.NonSerialized]
-	public float forceMultiplier = 0.5f;
+	public float forceMultiplier = 1.0f;
 	[System.NonSerialized]
 	public float timeToLive = 4.0f;	//4 seconds
 
@@ -61,7 +61,7 @@ public class Dice : MonoBehaviour {
 
 	}
 	public void Roll(Vector3 startingPosition) {
-		transform.position = startingPosition + new Vector3 (0, 20, 0);
+		transform.position = startingPosition + new Vector3 (0, 10, 0);
 		Vector3 forceVector = new Vector3 (Random.value, Random.value, Random.value) * forceMultiplier;
 		rb.AddForce (forceVector + forceDirection);
 		StartCoroutine (KillAfterTime (timeToLive));

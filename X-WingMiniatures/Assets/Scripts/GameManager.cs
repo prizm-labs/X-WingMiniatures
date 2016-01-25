@@ -27,6 +27,7 @@ public enum GameState {
 public class GameManager : MonoBehaviour {
 	
 	public GameObject playerPrefab;
+	public GameObject blankShipPrefab;	//used to check if a ship will collide with another in getrandomposition
 	public Text msgPrefab;
 
 	[System.NonSerialized]
@@ -63,7 +64,7 @@ public class GameManager : MonoBehaviour {
 
 	[System.NonSerialized]
 	public static float DistanceFromCamera = 200.0f;
-	float BoundariesHeight = 50.0f;
+	float BoundariesHeight = 500.0f;
 
 
 	private int maxNumPlayers = 5;
@@ -164,6 +165,9 @@ public class GameManager : MonoBehaviour {
 		actionStars.SetActive (false);
 
 		waitingForText.GetComponent<Text> ().text = "Waiting for " + (numPlayers - numPlayersJoined).ToString () + " more players to join\nJoin IP Address:'" + TabletopInitialization.GetIP () + ":6969'";
+
+		CreateBoundariesDice ();
+		CreateBoundariesShip ();
 	}
 
 	IEnumerator IntroduceWorld() {
@@ -231,6 +235,8 @@ public class GameManager : MonoBehaviour {
 
 		shipRecord.gameObject = ship_obj;
 
+		ship_obj.layer = 10;
+
 
 
 		//give database items
@@ -242,7 +248,7 @@ public class GameManager : MonoBehaviour {
 
 		ply.shipsUnderCommand.Add (ship_obj); 
 		ship_obj.transform.SetParent (ply.transform);
-		Debug.Log ("faction: " + ply.faction);
+		//Debug.Log ("faction: " + ply.faction);
 		ship_obj.transform.position = GetRandomSpawnPosition(ply.faction);		
 	}
 
@@ -289,16 +295,16 @@ public class GameManager : MonoBehaviour {
 				tempShipData.agility = 10;
 				tempShipData.selectedPilot = "Chewbacca";
 				//Debug.LogError ("LOOK HERE" + masterJSON.ToString());
-				Debug.LogError ("finding pilots" + masterJSON ["ships"] [0] ["pilots"].ToString ());
+				//Debug.LogError ("finding pilots" + masterJSON ["ships"] [0] ["pilots"].ToString ());
 				tempShipData.pilots = masterJSON ["ships"] [0] ["pilots"].ToString ();
 
-				Debug.Log ("tempdata's pilots : " + tempShipData.pilots);
+				//Debug.Log ("tempdata's pilots : " + tempShipData.pilots);
 				
 						
 				PrizmRecord<ShipSchema> tempShipRecord = new PrizmRecord<ShipSchema> ();
 				tempShipRecord.mongoDocument = tempShipData;
 
-				Debug.Log ("player in list: " + playerList [0].ToString ());
+				//Debug.Log ("player in list: " + playerList [0].ToString ());
 			
 				giveShipToPlayer (playerList [0].GetComponent<Player> (), tempShipRecord);
 			} else {
@@ -317,16 +323,16 @@ public class GameManager : MonoBehaviour {
 				tempShipData.agility = 10;
 				tempShipData.selectedPilot = "Chewbacca";
 				//Debug.LogError ("LOOK HERE" + masterJSON.ToString());
-				Debug.LogError ("finding pilots" + masterJSON ["ships"] [0] ["pilots"].ToString ());
+				//Debug.LogError ("finding pilots" + masterJSON ["ships"] [0] ["pilots"].ToString ());
 				tempShipData.pilots = masterJSON ["ships"] [0] ["pilots"].ToString ();
 
-				Debug.Log ("tempdata's pilots : " + tempShipData.pilots);
+				//Debug.Log ("tempdata's pilots : " + tempShipData.pilots);
 
 
 				PrizmRecord<ShipSchema> tempShipRecord = new PrizmRecord<ShipSchema> ();
 				tempShipRecord.mongoDocument = tempShipData;
 
-				Debug.Log ("player in list: " + playerList [0].ToString ());
+				//Debug.Log ("player in list: " + playerList [0].ToString ());
 
 				giveShipToPlayer (playerList[1].GetComponent<Player> (), tempShipRecord);
 				//giveShipToPlayer (playerList [(int)Random.Range (0, playerList.Count)].GetComponent<Player> (), tempShipRecord);
@@ -346,12 +352,46 @@ public class GameManager : MonoBehaviour {
 
 	public Vector3 GetRandomSpawnPosition(string faction) {
 		//light spawns on left, dark spawns on right
+		Vector3 tryPos;
+		RaycastHit hit;
+		bool goingToCollide = false;
+
+		int attempts = 10;		//will try 10 times before giving up
+
 		switch (faction) {
 		case "light":
-			return mainCamera.ViewportToWorldPoint(new Vector3(0.05f, Random.value, DistanceFromCamera));
+			do {
+				attempts--;
+				tryPos = mainCamera.ViewportToWorldPoint (new Vector3 (0.05f, Random.value, DistanceFromCamera));
+				if (Physics.SphereCast (tryPos - new Vector3 (0, 50, 0), 5.0f, Vector3.up, out hit)) {
+					if (hit.transform.tag == "Ship") {
+						goingToCollide = true;
+					} else {
+						goingToCollide = false;
+					}
+				} else {
+					goingToCollide = false;
+				}
+			} while (goingToCollide && attempts >= 0);
+			if (attempts <= 0) return mainCamera.ViewportToWorldPoint(new Vector3(0.5f, 0.5f, DistanceFromCamera));
+			return tryPos;
 
 		case "dark":
-			return mainCamera.ViewportToWorldPoint(new Vector3(0.95f, Random.value, DistanceFromCamera));
+			do {
+				attempts--;
+				tryPos = mainCamera.ViewportToWorldPoint (new Vector3 (0.95f, Random.value, DistanceFromCamera));
+				if (Physics.SphereCast (tryPos - new Vector3 (0, 50, 0), 5.0f, Vector3.up, out hit)) {
+					if (hit.transform.tag == "Ship") {
+						goingToCollide = true;
+					} else {
+						goingToCollide = false;
+					}
+				} else {
+					goingToCollide = false;
+				}
+			} while (goingToCollide && attempts >= 0);
+			if (attempts <= 0) return mainCamera.ViewportToWorldPoint(new Vector3(0.5f, 0.5f, DistanceFromCamera));
+			return tryPos;
 
 		default:
 			Debug.LogError ("invalid faction: " + faction + ", spawning in middle of game");
@@ -375,7 +415,7 @@ public class GameManager : MonoBehaviour {
 			Debug.Log ("waiting for players to enter");
 			break;
 		case GameState.WaitingForPlayersChooseShip:
-			Debug.Log ("players choosing ship");
+			//Debug.Log ("players choosing ship");
 			StartCoroutine(IntroduceWorld ());
 			break;
 		case GameState.PlanningPhase:
@@ -401,7 +441,7 @@ public class GameManager : MonoBehaviour {
 	public void CreateNewPlayer(PlayerSchema playerToCreate) {
 		createMsgLog (playerToCreate.name + " has joined the game!");
 		
-		Debug.Log("creating new player in: " + playerToCreate.faction);
+		//Debug.Log("creating new player in: " + playerToCreate.faction);
 		//instantiate player prefab
 		GameObject newPlayer = Instantiate(playerPrefab) as GameObject;
 		newPlayer.GetComponent<Player> ().record.mongoDocument = playerToCreate;
@@ -476,12 +516,12 @@ public class GameManager : MonoBehaviour {
 	}
 
 	//creates walls so balls can't escape world
-	public void CreateBoundaries() {
+	public void CreateBoundariesDice() {
 
-		Vector3 lowerLeft = mainCamera.ViewportToWorldPoint (new Vector3 (0, 0, DistanceFromCamera));
-		Vector3 lowerRight = mainCamera.ViewportToWorldPoint (new Vector3 (1, 0, DistanceFromCamera));
-		Vector3 upperLeft = mainCamera.ViewportToWorldPoint (new Vector3 (0, 1, DistanceFromCamera));
-		Vector3 upperRight = mainCamera.ViewportToWorldPoint (new Vector3 (1, 1, DistanceFromCamera));
+		Vector3 lowerLeft = mainCamera.ViewportToWorldPoint (new Vector3 (0.05f, 0.05f, DistanceFromCamera));
+		Vector3 lowerRight = mainCamera.ViewportToWorldPoint (new Vector3 (0.95f, 0.05f, DistanceFromCamera));
+		Vector3 upperLeft = mainCamera.ViewportToWorldPoint (new Vector3 (0.05f, 0.95f, DistanceFromCamera));
+		Vector3 upperRight = mainCamera.ViewportToWorldPoint (new Vector3 (0.95f, 0.95f, DistanceFromCamera));
 
 		float width = lowerRight.x - lowerLeft.x;
 		float height = upperRight.z - lowerRight.z; 
@@ -509,6 +549,78 @@ public class GameManager : MonoBehaviour {
 		rightBound.transform.position = right;
 		rightBound.transform.localScale = new Vector3 (0.1f, BoundariesHeight, height);
 
+		bottomBound.layer = 9;	//Dice layer
+		topBound.layer = 9;	//Dice layer
+		leftBound.layer = 9;	//Dice layer
+		rightBound.layer = 9;	//Dice layer
+
+		//make boundaries invisible
+		Destroy(bottomBound.GetComponent<MeshRenderer>());
+		Destroy(bottomBound.GetComponent<MeshCollider>());
+
+		Destroy(topBound.GetComponent<MeshRenderer>());
+		Destroy(topBound.GetComponent<MeshCollider>());
+
+		Destroy(leftBound.GetComponent<MeshRenderer>());
+		Destroy(leftBound.GetComponent<MeshCollider>());
+
+		Destroy(rightBound.GetComponent<MeshRenderer>());
+		Destroy(rightBound.GetComponent<MeshCollider>());
+	}
+
+	//creates walls so ships die when they hit it
+	public void CreateBoundariesShip() {
+
+		Vector3 lowerLeft = mainCamera.ViewportToWorldPoint (new Vector3 (-0.1f, -0.10f, DistanceFromCamera));
+		Vector3 lowerRight = mainCamera.ViewportToWorldPoint (new Vector3 (1.1f, -0.10f, DistanceFromCamera));
+		Vector3 upperLeft = mainCamera.ViewportToWorldPoint (new Vector3 (-0.1f, 1.1f, DistanceFromCamera));
+		Vector3 upperRight = mainCamera.ViewportToWorldPoint (new Vector3 (1.1f, 1.1f, DistanceFromCamera));
+
+		float width = lowerRight.x - lowerLeft.x;
+		float height = upperRight.z - lowerRight.z; 
+
+
+		Vector3 bottom = (lowerLeft + lowerRight ) / 2;
+		Vector3 top = (upperLeft + upperRight ) / 2;
+		Vector3 left = (upperLeft + lowerLeft ) / 2;
+		Vector3 right = (lowerRight + upperRight ) / 2;
+
+
+		GameObject bottomBound = GameObject.CreatePrimitive(PrimitiveType.Cube);
+		bottomBound.transform.position = bottom;
+		bottomBound.transform.localScale = new Vector3 (width, BoundariesHeight, 0.1f);
+
+		GameObject topBound = GameObject.CreatePrimitive(PrimitiveType.Cube);
+		topBound.transform.position = top;
+		topBound.transform.localScale = new Vector3 (width, BoundariesHeight, 0.1f);
+
+		GameObject leftBound = GameObject.CreatePrimitive(PrimitiveType.Cube);
+		leftBound.transform.position = left;
+		leftBound.transform.localScale = new Vector3 (0.1f, BoundariesHeight, height);
+
+		GameObject rightBound = GameObject.CreatePrimitive(PrimitiveType.Cube);
+		rightBound.transform.position = right;
+		rightBound.transform.localScale = new Vector3 (0.1f, BoundariesHeight, height);
+
+		bottomBound.GetComponent<BoxCollider> ().isTrigger = true;
+		bottomBound.tag = "GateToHell";
+		bottomBound.layer = 10;	//Ship Layer
+		bottomBound.name = "Hell";
+
+		topBound.GetComponent<BoxCollider> ().isTrigger = true;
+		topBound.tag = "GateToHell";
+		topBound.layer = 10;	//Ship Layer
+		topBound.name = "Hell";
+
+		leftBound.GetComponent<BoxCollider> ().isTrigger = true;
+		leftBound.tag = "GateToHell";
+		leftBound.layer = 10;	//Ship Layer
+		leftBound.name = "Hell";
+
+		rightBound.GetComponent<BoxCollider> ().isTrigger = true;
+		rightBound.tag = "GateToHell";
+		rightBound.layer = 10;	//Ship Layer
+		rightBound.name = "Hell";
 
 
 		//make boundaries invisible

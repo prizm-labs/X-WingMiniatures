@@ -7,6 +7,7 @@ public class Ship : MonoBehaviour {
 
 	public PrizmRecord<ShipSchema> record;
 
+
 	public Material redManeuverMaterialPrefab;
 	public Material greenManeuverMaterialPrefab;
 	public Material whiteManeuverMaterialPrefab;
@@ -51,22 +52,22 @@ public class Ship : MonoBehaviour {
 
 	public void GivePilot(string pilotName) {
 		//load the ship from the JSON, determined by the string of id in the json config file
-		Debug.Log("in givepilot: " + pilotName);
-		Debug.Log ("has record? " + record.ToString ());
-		Debug.Log ("has pilot list?: " + record.mongoDocument.pilots.ToString ());
+		//Debug.Log("in givepilot: " + pilotName);
+		//Debug.Log ("has record? " + record.ToString ());
+		//Debug.Log ("has pilot list?: " + record.mongoDocument.pilots.ToString ());
 		foreach (JSONNode jo in JSON.Parse(record.mongoDocument.pilots).AsArray) {
-			Debug.Log ("looping thru: " + jo.ToString());
-			Debug.Log ("comparing:" + jo ["name"].Value.ToString () + "to:" + pilotName);
+			//Debug.Log ("looping thru: " + jo.ToString());
+			//Debug.Log ("comparing:" + jo ["name"].Value.ToString () + "to:" + pilotName);
 			if (jo ["name"].Value.ToString() == pilotName) {
-				Debug.Log ("found him!: " + pilotName);
-				Debug.Log ("object data: " + jo.ToString ());
+				//Debug.Log ("found him!: " + pilotName);
+				//Debug.Log ("object data: " + jo.ToString ());
 				myPilot = new Pilot (jo);
 				break;
 			}
 		}
 
-		Debug.Log ("found pilot, done giving ship a pilto");
-		Debug.Log ("pilot's stats: " + myPilot.name + ":"+ myPilot.ability + ":" + myPilot.skill.ToString());
+		//Debug.Log ("found pilot, done giving ship a pilto");
+		//Debug.Log ("pilot's stats: " + myPilot.name + ":"+ myPilot.ability + ":" + myPilot.skill.ToString());
 	}
 
 	void Awake() {
@@ -77,6 +78,7 @@ public class Ship : MonoBehaviour {
 		points = new List<Vector3> ();
 
 		selectedTarget = GameObject.Find ("TestTarget");
+
 	}
 
 	void Update() {
@@ -90,7 +92,7 @@ public class Ship : MonoBehaviour {
 		}
 		if (Input.GetKeyDown (KeyCode.I)) {
 			//Debug.Log ("Trying to draw bezier path for ship");
-			maneuverRoutine = ExecuteManeuver("{\"speed\":\"3\",\"direction\":\"turnLeft\",\"difficulty\":\"2\"}");
+			maneuverRoutine = ExecuteManeuver("{\"speed\":\"3\",\"direction\":\"straight\",\"difficulty\":\"2\"}");
 
 			StartCoroutine(maneuverRoutine);
 			//and then send signal to game manager that this ship is done, advance to next one.
@@ -260,6 +262,15 @@ public class Ship : MonoBehaviour {
 			StartCoroutine (NormalizeBearingsDelay ());
 
 			coll.gameObject.GetComponent<Rigidbody> ().isKinematic = false;
+		}
+	}
+
+	void OnTriggerEnter (Collider coll) {
+		if (coll.tag == "GateToHell") {
+			Debug.Log ("hit the gate to hell, sending to hell");
+
+			Destroy (this.gameObject);
+
 		}
 	}
 
