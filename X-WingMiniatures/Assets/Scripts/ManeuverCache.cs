@@ -6,7 +6,7 @@ using System.Collections.Generic;
 public class ManeuverCache : MonoBehaviour {
 
 	[System.NonSerialized]
-	public static float baseSegmentMultiple = 5.0f;
+	public static float baseSegmentMultiple = 2.0f;
 	public static int totalMovementSegments = 5;
 
 
@@ -16,9 +16,7 @@ public class ManeuverCache : MonoBehaviour {
 
 		//initialize needed variables
 		string direction = maneuverDetails ["direction"];
-		Debug.Log ("taking direction: " + direction);
 		int speed = maneuverDetails ["speed"].AsInt;
-		Debug.Log ("taking speed: " + speed.ToString ());
 		float segmentDistance = speed * baseSegmentMultiple;
 
 		//clear points
@@ -43,17 +41,17 @@ public class ManeuverCache : MonoBehaviour {
 			}
 			break;
 		case "turnLeft":
-			for (int i = totalMovementSegments - 1; i > totalMovementSegments / 5; i--) {
-				skeletonPoints [i] += -shipT.right * segmentDistance;
+			for (int i = totalMovementSegments - 1; i > totalMovementSegments - 3; i--) {
+				skeletonPoints [i] += -shipT.right * segmentDistance * i;
 			}
 			break;
 		case "turnRight":
-			for (int i = totalMovementSegments - 1; i > totalMovementSegments / 2; i--) {
-				skeletonPoints [i] += shipT.right * segmentDistance;
+			for (int i = totalMovementSegments - 1; i > totalMovementSegments - 3; i--) {
+				skeletonPoints [i] += shipT.right * segmentDistance * i;
 			}
 			break;
 		default:				//covers "straight" and "kturn"
-			Debug.Log ("stiraght or k-turn, don't do anythign else");
+			//Debug.Log ("stiraght or k-turn, don't do anythign else");
 			break;
 		}
 

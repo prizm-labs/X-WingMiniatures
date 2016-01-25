@@ -11,10 +11,16 @@ public enum GameState {
 	None = 0,
 	WaitingForPlayersEnter, 
 	WaitingForPlayersChooseShip, 
-	PlanningPhase, 
-	ActivationPhase, 
-	CombatPhase,
-	EndPhase
+	PlanningPhase, 	//HH plan their movements
+	ActivationPhase, //loop through ships and execute in ascending pilot skill order
+						//HH chooses ship action
+	CombatPhase,		//loop through ships in descending turn order
+						//each HH takes turn choosing 1 ship in attack range
+						//bonuses applied (focus, etc)
+						//roll dice
+						//ships take damage, draw damage cards (if crit, give token)
+	EndPhase			//remove focus/evade tokens
+						//check if ships are still alive
 };
 
 
@@ -55,8 +61,8 @@ public class GameManager : MonoBehaviour {
 	[System.NonSerialized]
 	public JSONClass masterJSON;
 
-
-	float DistanceFromCamera = 100.0f;
+	[System.NonSerialized]
+	public static float DistanceFromCamera = 200.0f;
 	float BoundariesHeight = 50.0f;
 
 
@@ -217,9 +223,9 @@ public class GameManager : MonoBehaviour {
 	//functions that show how to 'give' players objects
 	//instantiates ship and creates the game object from the shiprecord
 	void giveShipToPlayer(Player ply, PrizmRecord<ShipSchema> shipRecord) {
-		Debug.Log ("in giveshiptoplayer(), shiprecord: " + shipRecord.ToString ());
-		Debug.Log ("now, the schema: " + shipRecord.mongoDocument.ToString());
-		Debug.Log ("now, the list: " + shipRecord.mongoDocument.pilots.ToString ());
+		//Debug.Log ("in giveshiptoplayer(), shiprecord: " + shipRecord.ToString ());
+		//Debug.Log ("now, the schema: " + shipRecord.mongoDocument.ToString());
+		//Debug.Log ("now, the list: " + shipRecord.mongoDocument.pilots.ToString ());
 
 		GameObject ship_obj = Instantiate (Resources.Load<GameObject> ("ShipPrefabs/" + shipRecord.mongoDocument.name));
 
@@ -267,33 +273,73 @@ public class GameManager : MonoBehaviour {
 
 		if (Input.GetKeyDown (KeyCode.S)) {
 
-			ShipSchema tempShipData = new ShipSchema ();
-			tempShipData.name = "TieFighter";
-			tempShipData.faction = "light";
-			tempShipData.isStressed = false;
-			tempShipData.actions = new List<string> () { "focus", "targetLock" };
-			tempShipData.maneuvers = new List<string> () { "jesusTurn", "alley-yoop" };
-			tempShipData.hull = 2;
-			tempShipData.shield = 2;
-			tempShipData.owner = "Donald Duck";
-			tempShipData.selectedManeuver = "jesusTurn";
-			tempShipData.selectedAction = "focus";
-			tempShipData.cost = 1000;
-			tempShipData.agility = 10;
-			tempShipData.selectedPilot = "Chewbacca";
-			//Debug.LogError ("LOOK HERE" + masterJSON.ToString());
-			Debug.LogError ("finding pilots" + masterJSON["ships"] [0] ["pilots"].ToString());
-			tempShipData.pilots = masterJSON ["ships"] [0] ["pilots"].ToString();
+			if (Random.value > 0.5f) {
+				ShipSchema tempShipData = new ShipSchema ();
+				tempShipData.name = "TieFighter";
+				tempShipData.faction = "dark";
+				tempShipData.isStressed = false;
+				tempShipData.actions = new List<string> () { "focus", "targetLock" };
+				tempShipData.maneuvers = new List<string> () { "jesusTurn", "alley-yoop" };
+				tempShipData.hull = 2;
+				tempShipData.shield = 2;
+				tempShipData.owner = "Donald Duck";
+				tempShipData.selectedManeuver = "jesusTurn";
+				tempShipData.selectedAction = "focus";
+				tempShipData.cost = 1000;
+				tempShipData.agility = 10;
+				tempShipData.selectedPilot = "Chewbacca";
+				//Debug.LogError ("LOOK HERE" + masterJSON.ToString());
+				Debug.LogError ("finding pilots" + masterJSON ["ships"] [0] ["pilots"].ToString ());
+				tempShipData.pilots = masterJSON ["ships"] [0] ["pilots"].ToString ();
 
-			Debug.Log ("tempdata's pilots : " + tempShipData.pilots);
+				Debug.Log ("tempdata's pilots : " + tempShipData.pilots);
 				
 						
-			PrizmRecord<ShipSchema> tempShipRecord = new PrizmRecord<ShipSchema> ();
-			tempShipRecord.mongoDocument = tempShipData;
+				PrizmRecord<ShipSchema> tempShipRecord = new PrizmRecord<ShipSchema> ();
+				tempShipRecord.mongoDocument = tempShipData;
 
-			Debug.Log ("player in list: " + playerList [0].ToString());
+				Debug.Log ("player in list: " + playerList [0].ToString ());
 			
-			giveShipToPlayer (playerList [(int)Random.Range(0, playerList.Count)].GetComponent<Player>(), tempShipRecord);
+				giveShipToPlayer (playerList [0].GetComponent<Player> (), tempShipRecord);
+			} else {
+				ShipSchema tempShipData = new ShipSchema ();
+				tempShipData.name = "MillenniumFalcon";
+				tempShipData.faction = "light";
+				tempShipData.isStressed = false;
+				tempShipData.actions = new List<string> () { "focus", "targetLock" };
+				tempShipData.maneuvers = new List<string> () { "jesusTurn", "alley-yoop" };
+				tempShipData.hull = 2;
+				tempShipData.shield = 2;
+				tempShipData.owner = "Scotch Tape";
+				tempShipData.selectedManeuver = "jesusTurn";
+				tempShipData.selectedAction = "focus";
+				tempShipData.cost = 1000;
+				tempShipData.agility = 10;
+				tempShipData.selectedPilot = "Chewbacca";
+				//Debug.LogError ("LOOK HERE" + masterJSON.ToString());
+				Debug.LogError ("finding pilots" + masterJSON ["ships"] [0] ["pilots"].ToString ());
+				tempShipData.pilots = masterJSON ["ships"] [0] ["pilots"].ToString ();
+
+				Debug.Log ("tempdata's pilots : " + tempShipData.pilots);
+
+
+				PrizmRecord<ShipSchema> tempShipRecord = new PrizmRecord<ShipSchema> ();
+				tempShipRecord.mongoDocument = tempShipData;
+
+				Debug.Log ("player in list: " + playerList [0].ToString ());
+
+				giveShipToPlayer (playerList[1].GetComponent<Player> (), tempShipRecord);
+				//giveShipToPlayer (playerList [(int)Random.Range (0, playerList.Count)].GetComponent<Player> (), tempShipRecord);
+			}
+		}
+
+		if (Input.GetKeyDown (KeyCode.Space)) {
+			if (Time.timeScale < 0.5f) {
+				Time.timeScale = 1.0f;
+			} else {
+				
+				Time.timeScale = 0.1f;
+			}
 		}
 
 	}
@@ -314,6 +360,9 @@ public class GameManager : MonoBehaviour {
 	}
 
 	public void AdvanceGameState() {
+		//remember to give a UI text indication that sthe stage is advancing
+
+
 		MyGameState++;
 		Debug.Log ("Game State Advance: " + MyGameState.ToString () + " out of: " + System.Enum.GetValues (typeof(GameState)).Length.ToString ());
 

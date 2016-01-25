@@ -11,6 +11,9 @@ public class Ship : MonoBehaviour {
 	public Material greenManeuverMaterialPrefab;
 	public Material whiteManeuverMaterialPrefab;
 
+	public GameObject protonTorpedoPrefab;
+	public GameObject laserPrefab;
+
 	[System.NonSerialized]
 	public Pilot myPilot;
 
@@ -38,10 +41,13 @@ public class Ship : MonoBehaviour {
 	public bool taggedAsPotentialTarget = false;
 
 	List<GameObject> potentialAttackTargets = new List<GameObject>();
+	GameObject selectedTarget;
 
+	private int numTorpedos = 2;		//the number of torpedos in one attack (looks cool i guess?)
+	private int numLasers = 5;
 
 	[System.NonSerialized]
-	public static float normalShipAltitude = 0.0f;
+	public static float normalShipAltitude = -100.0f;
 
 	public void GivePilot(string pilotName) {
 		//load the ship from the JSON, determined by the string of id in the json config file
@@ -64,10 +70,13 @@ public class Ship : MonoBehaviour {
 	}
 
 	void Awake() {
+		normalShipAltitude = -GameManager.DistanceFromCamera + 100;
 		rb = GetComponent<Rigidbody>();
 
 		lineRenderer = GetComponent<LineRenderer> ();
 		points = new List<Vector3> ();
+
+		selectedTarget = GameObject.Find ("TestTarget");
 	}
 
 	void Update() {
@@ -79,43 +88,80 @@ public class Ship : MonoBehaviour {
 			Debug.Log ("rolling dice");
 			RollDice ("defend", 2);
 		}
-		if (Input.GetKeyDown (KeyCode.F)) {
-			Debug.Log ("Trying to draw bezier path for ship");
-			maneuverRoutine = ExecuteManeuver("{\"speed\":1,\"direction\":\"turnLeft\",\"difficulty\":1");
+		if (Input.GetKeyDown (KeyCode.I)) {
+			//Debug.Log ("Trying to draw bezier path for ship");
+			maneuverRoutine = ExecuteManeuver("{\"speed\":\"3\",\"direction\":\"turnLeft\",\"difficulty\":\"2\"}");
 
 			StartCoroutine(maneuverRoutine);
 			//and then send signal to game manager that this ship is done, advance to next one.
 		}
-
-
-		if (Input.GetKeyDown (KeyCode.Space)) {
+		if (Input.GetKeyDown (KeyCode.U)) {
 			StartCoroutine (ScanAttackRange ());
 		}
+		if (Input.GetKeyDown (KeyCode.K)) {
+			StartCoroutine(FireProtonTorpedos ());
+		}
+		if (Input.GetKeyDown (KeyCode.L)) {
+			StartCoroutine(FireLazors ());
+		}
+		if (Input.GetKeyDown (KeyCode.Space)) {
+			//StartCoroutine(FireLazors ());
+		}
+	}
+
+	private IEnumerator FireLazors() {
+		for (int i = 0; i < numLasers; i++) {
+			GameObject laze = Instantiate (laserPrefab) as GameObject;
+			laze.GetComponent<Laser> ().target = selectedTarget.transform;
+			if (i % 2 == 0 ) laze.transform.position = transform.position + transform.right * 2;
+			else laze.transform.position = transform.position - transform.right * 2;
+			laze.transform.rotation = transform.rotation;
+			StartCoroutine (laze.GetComponent<Laser>().Deploy());
+
+			yield return new WaitForSeconds (0.2f);
+		}
+	}
+
+	private IEnumerator FireProtonTorpedos() {
+
+		for (int i = 0; i < numTorpedos; i++) {
+			GameObject torp = Instantiate (protonTorpedoPrefab) as GameObject;
+			torp.GetComponent<Torpedo> ().target = selectedTarget.transform;
+			torp.transform.position = transform.position;
+			torp.transform.rotation = transform.rotation;
+			if (i % 2 == 0) StartCoroutine (torp.GetComponent<Torpedo>().Deploy(-1));
+			else StartCoroutine (torp.GetComponent<Torpedo>().Deploy(1));
+			yield return new WaitForSeconds (0.5f);
+		}
+
 	}
 
 	private IEnumerator ScanAttackRange() {
 		potentialAttackTargets.Clear ();
 
+		if (playerOwner != null) {
+			switch (playerOwner.faction) {
 
-		switch (playerOwner.faction) {
-
-		case "light":
-			lineRenderer.material = greenManeuverMaterialPrefab;
-			break;
-		case "dark":
-			lineRenderer.material = redManeuverMaterialPrefab;
-			break;
-		default:
-			lineRenderer.material = whiteManeuverMaterialPrefab;
-			break;
+			case "light":
+				lineRenderer.material = greenManeuverMaterialPrefab;
+				break;
+			case "dark":
+				lineRenderer.material = redManeuverMaterialPrefab;
+				break;
+			default:
+				lineRenderer.material = whiteManeuverMaterialPrefab;
+				break;
+			}
 		}
 
 		RaycastHit hit;
+		RaycastHit[] hits;
 		//shoots a raycast at every degree for 90 degrees
 		for (int j = 1; j < 4; j++) {
 			for (int i = (int) (transform.eulerAngles.y + 45); i > (int) (transform.eulerAngles.y - 45); i--) {
 				
 				//shoot the raycast
+				/*	//this one doesn't pass through multiple targets
 				if (Physics.Raycast (transform.position, Quaternion.AngleAxis (i, Vector3.up) * Vector3.forward, out hit, j * attackRangeDelta)) {
 					Debug.DrawLine (transform.position, hit.point);
 					Debug.Log ("HIT SOMETHING! YAY1");
@@ -127,11 +173,30 @@ public class Ship : MonoBehaviour {
 					}
 
 				}
+				*/
+
+				//should go through multiple targets
+				hits = Physics.RaycastAll (transform.position, Quaternion.AngleAxis (i, Vector3.up) * Vector3.forward, j * attackRangeDelta);
+
+				for (int h = 0; h < hits.Length; h++ ) {
+
+						hit = hits [h];
+						Debug.DrawLine (transform.position, hit.point);
+						//Debug.Log ("HIT SOMETHING! YAY1");
+						if (!hit.transform.gameObject.GetComponent<Ship> ().taggedAsPotentialTarget) {
+							hit.transform.gameObject.GetComponent<Ship> ().taggedAsPotentialTarget = true;
+							hit.transform.gameObject.GetComponent<Ship> ().ShowAsAvailableTarget ();
+
+							potentialAttackTargets.Add (hit.transform.gameObject);
+						}
+
+				}
+
 
 				//draw a line segment
 				lineRenderer.SetVertexCount(2);
 				lineRenderer.SetPosition (0, transform.position);
-				lineRenderer.SetPosition (1, (Quaternion.AngleAxis (i, Vector3.up) * Vector3.forward) * j * attackRangeDelta);
+				lineRenderer.SetPosition (1, transform.position + (Quaternion.AngleAxis (i, Vector3.up) * Vector3.forward) * j * attackRangeDelta);
 
 				yield return new WaitForSeconds (0.01f);
 
@@ -141,6 +206,27 @@ public class Ship : MonoBehaviour {
 		Debug.Log ("Done scanning all attack ranges");
 		yield return new WaitForSeconds (0.1f);
 
+	}
+
+	public void TakeDamage(int damageTaken) {
+		int damageLeft = damageTaken;
+		if (record.mongoDocument.shield > 0 && damageLeft > 0) {
+			record.mongoDocument.shield--;
+			damageLeft--;
+		} else if (record.mongoDocument.hull > 0 && damageLeft > 0) {
+			record.mongoDocument.hull--;
+			damageLeft--;
+		}
+
+		Debug.Log ("damageLeft: " + damageLeft.ToString ());
+		Debug.Log ("done calculating damage, shield/hull: " + record.mongoDocument.shield + "/" + record.mongoDocument.hull);
+		Debug.Log ("took " + damageTaken.ToString () + " points of damage.");
+
+		if (record.mongoDocument.hull <= 0) {
+			//ship is kill
+		}
+
+		//if proton torpedos hit, show explosion damage
 	}
 
 	//makes the material red (or probably just adds a particle effect)
@@ -154,16 +240,9 @@ public class Ship : MonoBehaviour {
 
 		return null;
 	}
+		
 
-	public IEnumerator FireTorpedos(){
-	
-		return null;
-	}
 
-	public IEnumerator FireLazors() {
-
-		return null;
-	}
 
 	void OnCollisionEnter (Collision coll) {
 
@@ -188,9 +267,9 @@ public class Ship : MonoBehaviour {
 		yield return new WaitForSeconds (1.0f);
 		rb.velocity = Vector3.zero;
 		rb.angularVelocity = Vector3.zero;
-		Debug.Log ("before euler angles: " + transform.eulerAngles.ToString());
+		//.Log ("before euler angles: " + transform.eulerAngles.ToString());
 		transform.eulerAngles = new Vector3 (0, transform.eulerAngles.y, 0);
-		Debug.Log ("after euler angles: " + transform.eulerAngles.ToString());
+		//Debug.Log ("after euler angles: " + transform.eulerAngles.ToString());
 		rb.velocity = Vector3.zero;
 		rb.angularVelocity = Vector3.zero;
 		GetComponent<BoxCollider> ().enabled = true;
@@ -207,18 +286,20 @@ public class Ship : MonoBehaviour {
 		//take the path data from player's selection
 		JSONNode maneuverDetails = JSON.Parse(json);
 
-
 		switch (maneuverDetails ["difficulty"].AsInt) {
 		case 0:
 			//show green material, remove stress token
+			Debug.LogError("going as 0");
 			GiveGreenDifficulty();
 			break;
 		case 1:
 			//show white material, no outside effect
+			Debug.LogError("going as 1");
 			GiveWhiteDifficulty();
 			break;
 		case 2:
 			//show red material, give stress token
+			Debug.LogError("going as 2");
 			GiveRedDifficulty();
 			break;
 		default:
@@ -226,12 +307,15 @@ public class Ship : MonoBehaviour {
 			break;
 		}
 
+		/*
 		if (stressTokens > 0) {
 			record.mongoDocument.isStressed = true;
 		} else {
 			record.mongoDocument.isStressed = false;
 		}
-		StartCoroutine (record.Sync ());
+		*/
+		//uncomment this for integration testing
+		//StartCoroutine (record.Sync ());
 
 		//get the points to draw and move along from maneuver cache
 		skeletonPoints = ManeuverCache.GetManeuverPoints(transform, maneuverDetails);
@@ -242,14 +326,9 @@ public class Ship : MonoBehaviour {
 
 		//move ship along curve
 
-		Debug.Log ("drawingpoints count: " + drawingPoints.Count.ToString ());
 		for (int i = 0; i < drawingPoints.Count; i++) {
-			Debug.Log ("NEW DESTINATION: " + drawingPoints [i].ToString ());
 
 			float distance = (drawingPoints [i] - transform.position).magnitude;
-			Debug.Log ("distance froom start to end: " + distance.ToString ());
-
-			Debug.Log ("looking at: " + drawingPoints [i].ToString ());
 			transform.LookAt (drawingPoints [i]);
 
 			for (int j = 0; j < steps; j++) {
@@ -259,10 +338,8 @@ public class Ship : MonoBehaviour {
 			}
 		}
 
-		Debug.LogError ("KTURN: " + maneuverDetails ["direction"].ToString ());
 
 		if (maneuverDetails ["direction"].Value.ToString () == "kTurn") {
-			Debug.Log ("executing kTurn, going to elegantly turn aroudn");
 
 			//turn one degree for 180 degrees
 			for (int i = 0; i < 180; i++) {
@@ -272,10 +349,11 @@ public class Ship : MonoBehaviour {
 		}
 
 		//erase curve
-		Debug.Log ("done moving");
+		//Debug.Log ("done moving");
 		EraseLine ();
 
 		isMoving = false;
+		StartCoroutine (NormalizeBearingsDelay ());
 	}
 
 	public void RollDice(string attackOrDefend, int numDice) {
