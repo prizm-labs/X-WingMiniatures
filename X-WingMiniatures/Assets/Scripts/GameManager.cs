@@ -78,6 +78,9 @@ public class GameManager : MonoBehaviour {
 	public PrizmRecordGroup<ShipSchema> shipRecordGroup;
 	Meteor.Collection<PlayerSchema> playerCollection;		//list of players
 
+	bool timeStopped = false;
+	List<GameObject> munitions = new List<GameObject> ();
+	List<Vector3> velocities = new List<Vector3> ();
 
 	void Awake () {
 		if (Instance == null)
@@ -227,7 +230,7 @@ public class GameManager : MonoBehaviour {
 	//functions that show how to 'give' players objects
 	//instantiates ship and creates the game object from the shiprecord
 	void giveShipToPlayer(Player ply, PrizmRecord<ShipSchema> shipRecord) {
-		//Debug.Log ("in giveshiptoplayer(), shiprecord: " + shipRecord.ToString ());
+		Debug.Log ("in giveshiptoplayer(), shiprecord.name: " + shipRecord.mongoDocument.name.ToString ());
 		//Debug.Log ("now, the schema: " + shipRecord.mongoDocument.ToString());
 		//Debug.Log ("now, the list: " + shipRecord.mongoDocument.pilots.ToString ());
 
@@ -241,6 +244,7 @@ public class GameManager : MonoBehaviour {
 
 		//give database items
 		ship_obj.GetComponent<Ship> ().record = shipRecord;	//maybe this will work?
+		ship_obj.GetComponent<Ship>().AnnounceSelf();
 
 		//give pilot
 		ship_obj.GetComponent<Ship>().GivePilot(shipRecord.mongoDocument.selectedPilot);
@@ -338,16 +342,37 @@ public class GameManager : MonoBehaviour {
 				//giveShipToPlayer (playerList [(int)Random.Range (0, playerList.Count)].GetComponent<Player> (), tempShipRecord);
 			}
 		}
-
-		if (Input.GetKeyDown (KeyCode.Space)) {
-			if (Time.timeScale < 0.5f) {
-				Time.timeScale = 1.0f;
-			} else {
-				
-				Time.timeScale = 0.1f;
-			}
+		if (Input.GetKeyDown (KeyCode.D)) {
+			ToggleTime ();
 		}
+		if (Input.GetKeyDown (KeyCode.Space)) {
+			
+		}
+	}
 
+	public void ToggleTime() {
+		
+		if (timeStopped) {
+			for (int i = 0; i < munitions.Count; i++) {
+				if (munitions[i] != null)
+					munitions [i].GetComponent<Rigidbody> ().velocity = velocities [i];
+			}
+
+			timeStopped = false;
+		} else {
+			munitions.Clear ();
+			velocities.Clear ();
+			foreach (GameObject go in GameObject.FindGameObjectsWithTag ("Munition")) {
+				munitions.Add (go);
+			}
+			for (int i = 0; i < munitions.Count; i++) {
+				velocities.Insert (i, munitions [i].GetComponent<Rigidbody> ().velocity);
+			}
+			foreach (GameObject go in munitions) {
+				go.GetComponent<Rigidbody> ().velocity = Vector3.zero;
+			}
+			timeStopped = true;
+		}
 	}
 
 	public Vector3 GetRandomSpawnPosition(string faction) {
@@ -517,6 +542,7 @@ public class GameManager : MonoBehaviour {
 
 	//creates walls so balls can't escape world
 	public void CreateBoundariesDice() {
+		List<GameObject> boundaries = new List<GameObject> ();
 
 		Vector3 lowerLeft = mainCamera.ViewportToWorldPoint (new Vector3 (0.05f, 0.05f, DistanceFromCamera));
 		Vector3 lowerRight = mainCamera.ViewportToWorldPoint (new Vector3 (0.95f, 0.05f, DistanceFromCamera));
@@ -535,19 +561,30 @@ public class GameManager : MonoBehaviour {
 
 		GameObject bottomBound = GameObject.CreatePrimitive(PrimitiveType.Cube);
 		bottomBound.transform.position = bottom;
-		bottomBound.transform.localScale = new Vector3 (width, BoundariesHeight, 0.1f);
+		bottomBound.transform.localScale = new Vector3 (width, BoundariesHeight, 1f);
 
 		GameObject topBound = GameObject.CreatePrimitive(PrimitiveType.Cube);
 		topBound.transform.position = top;
-		topBound.transform.localScale = new Vector3 (width, BoundariesHeight, 0.1f);
+		topBound.transform.localScale = new Vector3 (width, BoundariesHeight, 1f);
 
 		GameObject leftBound = GameObject.CreatePrimitive(PrimitiveType.Cube);
 		leftBound.transform.position = left;
-		leftBound.transform.localScale = new Vector3 (0.1f, BoundariesHeight, height);
+		leftBound.transform.localScale = new Vector3 (1f, BoundariesHeight, height);
 
 		GameObject rightBound = GameObject.CreatePrimitive(PrimitiveType.Cube);
 		rightBound.transform.position = right;
-		rightBound.transform.localScale = new Vector3 (0.1f, BoundariesHeight, height);
+		rightBound.transform.localScale = new Vector3 (1f, BoundariesHeight, height);
+
+		boundaries.Add (bottomBound);
+		boundaries.Add (topBound);
+		boundaries.Add (leftBound);
+		boundaries.Add (rightBound);
+
+		foreach (GameObject bond in boundaries) {
+			bond.AddComponent<Rigidbody> ();
+			bond.GetComponent<Rigidbody> ().useGravity = false;
+			bond.GetComponent<Rigidbody> ().isKinematic = true;
+		}
 
 		bottomBound.layer = 9;	//Dice layer
 		topBound.layer = 9;	//Dice layer

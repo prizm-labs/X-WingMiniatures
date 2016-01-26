@@ -45,7 +45,7 @@ public class Ship : MonoBehaviour {
 	GameObject selectedTarget;
 
 	private int numTorpedos = 2;		//the number of torpedos in one attack (looks cool i guess?)
-	private int numLasers = 5;
+	private int numLasers = 3;
 
 	[System.NonSerialized]
 	public static float normalShipAltitude = -100.0f;
@@ -78,17 +78,17 @@ public class Ship : MonoBehaviour {
 		points = new List<Vector3> ();
 
 		selectedTarget = GameObject.Find ("TestTarget");
-
+		//Debug.Log (record.mongoDocument.name);
 	}
 
 	void Update() {
 		if (Input.GetKeyDown (KeyCode.P)) {
 			Debug.Log ("rolling dice");
-			RollDice ("attack", 2);
+			StartCoroutine(RollDice ("attack", 2));
 		}
 		if (Input.GetKeyDown (KeyCode.O)) {
 			Debug.Log ("rolling dice");
-			RollDice ("defend", 2);
+			StartCoroutine(RollDice ("defend", 2));
 		}
 		if (Input.GetKeyDown (KeyCode.I)) {
 			//Debug.Log ("Trying to draw bezier path for ship");
@@ -97,6 +97,7 @@ public class Ship : MonoBehaviour {
 			StartCoroutine(maneuverRoutine);
 			//and then send signal to game manager that this ship is done, advance to next one.
 		}
+		//
 		if (Input.GetKeyDown (KeyCode.U)) {
 			StartCoroutine (ScanAttackRange ());
 		}
@@ -106,8 +107,20 @@ public class Ship : MonoBehaviour {
 		if (Input.GetKeyDown (KeyCode.L)) {
 			StartCoroutine(FireLazors ());
 		}
+		if (Input.GetKeyDown (KeyCode.J)) {
+			if (record.mongoDocument.name == "MillenniumFalcon")
+				StartCoroutine(DoABarrelRoll(1, 1.0f));
+					else
+			StartCoroutine (DoABarrelRoll (1));
+		}
+		if (Input.GetKeyDown (KeyCode.H)) {
+			if (record.mongoDocument.name == "MillenniumFalcon")
+				StartCoroutine(DoABarrelRoll(-1, 1.0f));
+			else
+			StartCoroutine (DoABarrelRoll (-1));
+		}
 		if (Input.GetKeyDown (KeyCode.Space)) {
-			//StartCoroutine(FireLazors ());
+			StartCoroutine (DodgeAttackBarrelRolls());
 		}
 	}
 
@@ -120,8 +133,9 @@ public class Ship : MonoBehaviour {
 			laze.transform.rotation = transform.rotation;
 			StartCoroutine (laze.GetComponent<Laser>().Deploy());
 
-			yield return new WaitForSeconds (0.2f);
+			yield return new WaitForSeconds (0.05f);
 		}
+		GameManager.Instance.ToggleTime ();
 	}
 
 	private IEnumerator FireProtonTorpedos() {
@@ -133,11 +147,16 @@ public class Ship : MonoBehaviour {
 			torp.transform.rotation = transform.rotation;
 			if (i % 2 == 0) StartCoroutine (torp.GetComponent<Torpedo>().Deploy(-1));
 			else StartCoroutine (torp.GetComponent<Torpedo>().Deploy(1));
-			yield return new WaitForSeconds (0.5f);
+			yield return new WaitForSeconds (0.1f);
 		}
+
 
 	}
 
+	public void AnnounceSelf() {
+		Debug.Log ("my record is: " + record.mongoDocument);
+
+	}
 	private IEnumerator ScanAttackRange() {
 		potentialAttackTargets.Clear ();
 
@@ -274,8 +293,8 @@ public class Ship : MonoBehaviour {
 		}
 	}
 
-	private IEnumerator NormalizeBearingsDelay() {
-		yield return new WaitForSeconds (1.0f);
+	private IEnumerator NormalizeBearingsDelay(float time = 1.0f) {
+		yield return new WaitForSeconds (time);
 		rb.velocity = Vector3.zero;
 		rb.angularVelocity = Vector3.zero;
 		//.Log ("before euler angles: " + transform.eulerAngles.ToString());
@@ -284,6 +303,19 @@ public class Ship : MonoBehaviour {
 		rb.velocity = Vector3.zero;
 		rb.angularVelocity = Vector3.zero;
 		GetComponent<BoxCollider> ().enabled = true;
+
+		transform.position = new Vector3 (transform.position.x, normalShipAltitude, transform.position.z);
+	}
+
+	private void StabilizeImmediate() {
+
+		rb.velocity = Vector3.zero;
+		rb.angularVelocity = Vector3.zero;
+		//.Log ("before euler angles: " + transform.eulerAngles.ToString());
+		transform.eulerAngles = new Vector3 (0, transform.eulerAngles.y, 0);
+		//Debug.Log ("after euler angles: " + transform.eulerAngles.ToString());
+		rb.velocity = Vector3.zero;
+		rb.angularVelocity = Vector3.zero;
 
 		transform.position = new Vector3 (transform.position.x, normalShipAltitude, transform.position.z);
 	}
@@ -300,17 +332,14 @@ public class Ship : MonoBehaviour {
 		switch (maneuverDetails ["difficulty"].AsInt) {
 		case 0:
 			//show green material, remove stress token
-			Debug.LogError("going as 0");
 			GiveGreenDifficulty();
 			break;
 		case 1:
 			//show white material, no outside effect
-			Debug.LogError("going as 1");
 			GiveWhiteDifficulty();
 			break;
 		case 2:
 			//show red material, give stress token
-			Debug.LogError("going as 2");
 			GiveRedDifficulty();
 			break;
 		default:
@@ -367,10 +396,12 @@ public class Ship : MonoBehaviour {
 		StartCoroutine (NormalizeBearingsDelay ());
 	}
 
-	public void RollDice(string attackOrDefend, int numDice) {
+	public IEnumerator RollDice(string attackOrDefend, int numDice) {
 		for (int i = 0; i < numDice; i++) {
 			GameObject newDie = Instantiate(Resources.Load (attackOrDefend + "Die", typeof(GameObject))) as GameObject;
-			newDie.GetComponent<Dice> ().Roll (transform.position);
+			//GameObject newDie = Instantiate(Resources.Load ("attack_d-8_thickened", typeof(GameObject))) as GameObject;
+			newDie.GetComponent<Dice> ().Roll (transform.position + transform.forward * numDice * 10);
+			yield return new WaitForSeconds (0.1f);
 		}
 	}
 
@@ -412,6 +443,33 @@ public class Ship : MonoBehaviour {
 
 	private void EraseLine() {
 		lineRenderer.SetVertexCount (0);
+	}
+
+	private IEnumerator DodgeAttackBarrelRolls() {
+		float duration = 0.50f;
+		if (record.mongoDocument.name == "MillenniumFalcon")
+			duration = 1.0f;
+		GetComponent<BoxCollider> ().enabled = false;
+		StartCoroutine (DoABarrelRoll (1, duration));
+		yield return new WaitForSeconds (duration + 0.05f);
+		StartCoroutine (DoABarrelRoll (-1, duration));
+		yield return new WaitForSeconds (duration + 0.05f);
+		GetComponent<BoxCollider> ().enabled = true;
+
+	}
+
+	private IEnumerator DoABarrelRoll(int direction, float duration = 0.5f) {	//0.5f good for tie fighter, bad for M_falcon
+		/*
+		for (int i = 0; i < 360; i++) {
+			transform.Rotate (Vector3.forward * direction);
+			transform.position = transform.position + (Vector3.forward * direction) / 10;
+			yield return new WaitForSeconds (0.0000001f);
+		}
+		*/
+		rb.AddForce (Vector3.forward * 1000 * direction);
+		rb.AddTorque (transform.forward * 10000 * direction);
+		yield return StartCoroutine(NormalizeBearingsDelay (duration));
+		//yield return null;
 	}
 
 

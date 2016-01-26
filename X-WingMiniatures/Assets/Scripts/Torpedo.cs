@@ -41,12 +41,16 @@ public class Torpedo : MonoBehaviour {
 		rb.AddForce (transform.right * deployForce * leftOrRight);
 		yield return new WaitForSeconds (rocketDelay);
 		Rocket ();
+		yield return new WaitForSeconds (rocketDelay / 2);
+		GameManager.Instance.ToggleTime ();
 	}
 
 	void Rocket() {
 		rb.velocity = Vector3.zero;
 		transform.LookAt (target);
 		rb.AddForce (transform.forward * rocketThrust);
+
+
 	}
 
 	IEnumerator Explode() {
