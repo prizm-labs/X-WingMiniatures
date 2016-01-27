@@ -643,7 +643,7 @@ public class TabletopInitialization : MonoBehaviour {
 		IPHostEntry ipEntry = System.Net.Dns.GetHostEntry (strHostName);
 		IPAddress[] addr = ipEntry.AddressList;
 		//GameManager.Instance.createMsgLog (addr.ToString(), 10);
-		Debug.Log ("addr: " + addr[0].ToString());
+		//Debug.Log ("addr: " + addr[0].ToString());
 		return addr [addr.Length - 1].ToString ();
 	}
 

@@ -294,9 +294,6 @@ public class GameManager : MonoBehaviour {
 	//instantiates ship and creates the game object from the shiprecord
 	void giveShipToPlayer(Player ply, PrizmRecord<ShipSchema> shipRecord) {
 		numShips++;
-		Debug.Log ("in giveshiptoplayer(), shiprecord.name: " + shipRecord.mongoDocument.name.ToString ());
-		//Debug.Log ("now, the schema: " + shipRecord.mongoDocument.ToString());
-		//Debug.Log ("now, the list: " + shipRecord.mongoDocument.pilots.ToString ());
 
 		GameObject ship_obj = Instantiate (Resources.Load<GameObject> ("ShipPrefabs/" + shipRecord.mongoDocument.name));
 
@@ -361,10 +358,10 @@ public class GameManager : MonoBehaviour {
 				tempShipData.selectedAction = "focus";
 				tempShipData.cost = 1000;
 				tempShipData.agility = 10;
-				tempShipData.selectedPilot = "Chewbacca";
+				tempShipData.selectedPilot = "Darth Vader";
 				//Debug.LogError ("LOOK HERE" + masterJSON.ToString());
 				//Debug.LogError ("finding pilots" + masterJSON ["ships"] [0] ["pilots"].ToString ());
-				tempShipData.pilots = masterJSON ["ships"] [0] ["pilots"].ToString ();
+				tempShipData.pilots = masterJSON ["ships"] [3] ["pilots"].ToString ();
 
 				//Debug.Log ("tempdata's pilots : " + tempShipData.pilots);
 				
@@ -415,11 +412,14 @@ public class GameManager : MonoBehaviour {
 				Debug.Log ("ship name: " + ship.name);
 			}
 		}
-		if (Input.GetKeyDown (KeyCode.Space)) {
+		if (Input.GetKeyDown (KeyCode.Z)) {
 			PlayAudioChance ("Music", "DarthVader", 0.90f);
 		}
-		if (Input.GetKeyDown (KeyCode.Z)) {
-			PlayAudioChance ("SHIPS_EFFECTS/Move", chance: 0.90f);
+		if (Input.GetKeyDown (KeyCode.Space)) {
+			//PlayAudioChance ("SHIPS_EFFECTS/Move", chance: 0.90f);
+			PlayAudioChanceAtPoint("TieFighter/Move", chance: 0.80f);
+			//currentClip = starWarsIntroClip;
+			//AudioSource.PlayClipAtPoint (currentClip, Vector3.zero);
 		}
 	}
 
@@ -502,7 +502,7 @@ public class GameManager : MonoBehaviour {
 
 		switch (MyGameState) {
 		case GameState.WaitingForPlayersEnter:
-			Debug.Log ("waiting for players to enter");
+			Debug.Log ("GameState of Waiting for players to enter");
 			break;
 		case GameState.WaitingForPlayersChooseShip:
 			//Debug.Log ("players choosing ship");
@@ -532,7 +532,7 @@ public class GameManager : MonoBehaviour {
 
 		//advance game state at end (take care of work of what game state we are currently in at advance gamestate())
 		MyGameState++;
-		Debug.Log ("Game State Advance: " + MyGameState.ToString () + " out of: " + System.Enum.GetValues (typeof(GameState)).Length.ToString ());
+		//Debug.Log ("Game State Advance: " + MyGameState.ToString () + " out of: " + System.Enum.GetValues (typeof(GameState)).Length.ToString ());
 
 		if ((int)MyGameState > System.Enum.GetValues (typeof(GameState)).Length - 1) {
 			MyGameState = GameState.PlanningPhase;
@@ -570,7 +570,7 @@ public class GameManager : MonoBehaviour {
 		foreach (GameObject craft in sortedShipList) {
 			StartCoroutine(craft.GetComponent<Ship>().EnterCombat());
 			if (craft.GetComponent<Ship> ().record.mongoDocument.faction == "dark")
-				PlayAudioChance ("Music", "DarthVader", 0.80f);
+				PlayAudioChance ("CombatPhase/" + craft.GetComponent<Ship> ().record.mongoDocument.faction, chance: 0.80f);
 			while (!craft.GetComponent<Ship> ().phaseDutiesCompleted) {
 				yield return null;
 			}
@@ -584,6 +584,7 @@ public class GameManager : MonoBehaviour {
 			while (craft.GetComponent<Ship> ().isMoving) {
 				yield return null;
 			}
+			yield return new WaitForSeconds (1.0f);
 		}
 	}
 
@@ -609,18 +610,18 @@ public class GameManager : MonoBehaviour {
 		}
 	}
 
-	public void PlayAudioChanceAtPoint (Vector3 position, string folder, string specificTrack = null, float chance = 0.20f, float volume = 1.0f) {
-
+	public void PlayAudioChanceAtPoint (string folder, string specificTrack = null, float chance = 0.20f, float volume = 1.0f, Vector3 position = new Vector3()) {
+		
+		if (position == Vector3.zero)
+			position = mainCamera.transform.position;
 		string path = "Audio/" + folder;
 
 		if (Random.value < chance) {
-			if (specificTrack != null) {		//load that specific track
-				Debug.Log("loading from: " + path + "/" + specificTrack);
+			if (specificTrack != null) {
 				currentClip = Resources.Load(path + "/" + specificTrack, typeof(AudioClip)) as AudioClip;
 				AudioSource.PlayClipAtPoint (currentClip, position);
 			} else {		//find random track from folder
 				int randomClip = Random.Range (0, CountNumClips (folder));
-				Debug.Log ("random clip playing is: " + randomClip.ToString ());
 				currentClip = Resources.Load(path + "/" + GetFileName(path, randomClip), typeof(AudioClip)) as AudioClip;
 				AudioSource.PlayClipAtPoint (currentClip, position);
 			}

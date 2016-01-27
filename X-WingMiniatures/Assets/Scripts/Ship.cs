@@ -4,6 +4,7 @@ using SimpleJSON;
 using System.Collections.Generic;
 using TouchScript;
 using TouchScript.Gestures;
+using System.IO;
 
 
 public class Ship : MonoBehaviour {
@@ -75,14 +76,22 @@ public class Ship : MonoBehaviour {
 		//Debug.Log ("has pilot list?: " + record.mongoDocument.pilots.ToString ());
 		foreach (JSONNode jo in JSON.Parse(record.mongoDocument.pilots).AsArray) {
 			//Debug.Log ("looping thru: " + jo.ToString());
-			//Debug.Log ("comparing:" + jo ["name"].Value.ToString () + "to:" + pilotName);
+			Debug.Log ("comparing:" + jo ["name"].Value.ToString () + "to:" + pilotName);
 			if (jo ["name"].Value.ToString() == pilotName) {
 				//Debug.Log ("found him!: " + pilotName);
-				//Debug.Log ("object data: " + jo.ToString ());
+				Debug.Log ("object data of skill: " + jo["skill"].Value.ToString ());
 				myPilot = new Pilot (jo);
 				break;
 			}
 		}
+
+		Debug.Log ("playing audio clip for: " + pilotName);
+		if (DoesPilotHaveAudio (pilotName))
+			GameManager.Instance.PlayAudioChanceAtPoint (pilotName.Replace (" ", string.Empty), chance: 0.98f);
+		else
+			GameManager.Instance.PlayAudioChanceAtPoint ("OnGameEnter/" + record.mongoDocument.faction, chance: 0.98f);
+
+		Debug.Log ("my pilot's skill: " + myPilot.skill.ToString ());
 
 		//Debug.Log ("found pilot, done giving ship a pilto");
 		//Debug.Log ("pilot's stats: " + myPilot.name + ":"+ myPilot.ability + ":" + myPilot.skill.ToString());
@@ -99,6 +108,8 @@ public class Ship : MonoBehaviour {
 
 		shieldObject = transform.FindChild ("Shield").gameObject;
 		shieldObject.SetActive (false);
+
+		GetComponent<ParticleSystem> ().Stop ();
 		//Debug.Log (record.mongoDocument.name);
 	}
 
@@ -113,12 +124,12 @@ public class Ship : MonoBehaviour {
 		}
 		if (Input.GetKeyDown (KeyCode.I)) {
 			//Debug.Log ("Trying to draw bezier path for ship");
-			maneuverRoutine = ExecuteManeuver("{\"speed\":\"3\",\"direction\":\"straight\",\"difficulty\":\"2\"}");
+			maneuverRoutine = ExecuteManeuver("{\"speed\":\"5\",\"direction\":\"straight\",\"difficulty\":\"0\"}");
 
-			StartCoroutine(maneuverRoutine);
+			//StartCoroutine(maneuverRoutine);
 			//and then send signal to game manager that this ship is done, advance to next one.
 		}
-		//
+			
 		if (Input.GetKeyDown (KeyCode.U)) {
 			StartCoroutine (ScanAttackRange ());
 		}
@@ -143,13 +154,18 @@ public class Ship : MonoBehaviour {
 		if (Input.GetKeyDown (KeyCode.M)) {
 			StartCoroutine (DodgeAttackBarrelRolls());
 		}
-
+		if (Input.GetKeyDown (KeyCode.Y)) {
+			TurnOnShield ();
+		}
 		if (Input.GetKeyDown (KeyCode.N)) {
 			StartCoroutine (FlickerShield ());
 		}
 	}
 
 	private IEnumerator FireLazors() {
+
+		GameManager.Instance.PlayAudioChanceAtPoint (record.mongoDocument.name + "/Shoot", chance: 0.95f);
+
 		for (int i = 0; i < numLasers; i++) {
 			GameObject laze = Instantiate (laserPrefab) as GameObject;
 			laze.GetComponent<Laser> ().target = selectedTarget.transform;
@@ -257,6 +273,7 @@ public class Ship : MonoBehaviour {
 	}
 
 	private IEnumerator FireProtonTorpedos() {
+		GameManager.Instance.PlayAudioChanceAtPoint (record.mongoDocument.name + "/Shoot", chance: 0.95f);
 
 		for (int i = 0; i < numTorpedos; i++) {
 			GameObject torp = Instantiate (protonTorpedoPrefab) as GameObject;
@@ -271,8 +288,9 @@ public class Ship : MonoBehaviour {
 
 	}
 
+	//used to debug and make sure the ship got the right record
 	public void AnnounceSelf() {
-		Debug.Log ("my record is: " + record.mongoDocument);
+		//Debug.Log ("my record is: " + record.mongoDocument);
 
 	}
 	private IEnumerator ScanAttackRange() {
@@ -298,21 +316,6 @@ public class Ship : MonoBehaviour {
 		//shoots a raycast at every degree for 90 degrees
 		for (int j = 1; j < 4; j++) {
 			for (int i = (int) (transform.eulerAngles.y + 45); i > (int) (transform.eulerAngles.y - 45); i--) {
-				
-				//shoot the raycast
-				/*	//this one doesn't pass through multiple targets
-				if (Physics.Raycast (transform.position, Quaternion.AngleAxis (i, Vector3.up) * Vector3.forward, out hit, j * attackRangeDelta)) {
-					Debug.DrawLine (transform.position, hit.point);
-					Debug.Log ("HIT SOMETHING! YAY1");
-					if (!hit.transform.gameObject.GetComponent<Ship> ().taggedAsPotentialTarget) {
-						hit.transform.gameObject.GetComponent<Ship> ().taggedAsPotentialTarget = true;
-						hit.transform.gameObject.GetComponent<Ship> ().ShowAsAvailableTarget ();
-
-						potentialAttackTargets.Add (hit.transform.gameObject);
-					}
-
-				}
-				*/
 
 				//should go through multiple targets
 				hits = Physics.RaycastAll (transform.position, Quaternion.AngleAxis (i, Vector3.up) * Vector3.forward, j * attackRangeDelta);
@@ -445,6 +448,9 @@ public class Ship : MonoBehaviour {
 
 	public IEnumerator ExecuteManeuver(string json) {
 		isMoving = true;
+		Debug.Log ("in maneuver");
+
+		GameManager.Instance.PlayAudioChanceAtPoint (record.mongoDocument.name + "/Move", chance: 0.95f);
 
 		List<Vector3> drawingPoints = new List<Vector3> ();
 		List<Vector3> skeletonPoints = new List<Vector3> ();
@@ -605,6 +611,7 @@ public class Ship : MonoBehaviour {
 	}
 
 	private IEnumerator DoABarrelRoll(int direction, float duration = 0.5f) {	//0.5f good for tie fighter, bad for M_falcon
+		if (direction > 0) GameManager.Instance.PlayAudioChanceAtPoint (record.mongoDocument.name + "/Move", chance: 0.85f);
 		/*
 		for (int i = 0; i < 360; i++) {
 			transform.Rotate (Vector3.forward * direction);
@@ -626,16 +633,13 @@ public class Ship : MonoBehaviour {
 		TurnOffShield ();
 		yield return new WaitForSeconds (0.2f);
 
-		for (int i = 50; i > 0; i--) {
+		for (int i = 40; i > 0; i--) {
 			TurnOnShield ();
-			yield return new WaitForSeconds ((i )/ 500.0f);
+			yield return new WaitForSeconds ((i * i )/ 10000.0f);
 			TurnOffShield ();
-			yield return new WaitForSeconds ((i ) / 750.0f);
+			yield return new WaitForSeconds ((i) / 15000.0f);
 
 		}
-
-		Debug.Log ("done");
-
 	}
 
 	private void TurnOnShield() {
@@ -647,6 +651,13 @@ public class Ship : MonoBehaviour {
 		shieldObject.SetActive (false);
 	}
 
-
+	private bool DoesPilotHaveAudio(string pilotName) {
+		DirectoryInfo levelDirectoryPath = new DirectoryInfo (Application.dataPath + "/Resources/Audio/" + pilotName.Replace(" ", string.Empty));
+		if (levelDirectoryPath.Exists)
+			return true;
+		return false;
+		//FileInfo[] fileInfo = levelDirectoryPath.GetFiles ("*.*", SearchOption.AllDirectories);
+		//return fileInfo [index * 2].Name.Substring(0,fileInfo [index * 2].Name.Length - 4);
+	}
 
 }
