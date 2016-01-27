@@ -2,6 +2,9 @@
 using System.Collections;
 using SimpleJSON;
 using System.Collections.Generic;
+using TouchScript;
+using TouchScript.Gestures;
+
 
 public class Ship : MonoBehaviour {
 
@@ -11,6 +14,8 @@ public class Ship : MonoBehaviour {
 	public Material redManeuverMaterialPrefab;
 	public Material greenManeuverMaterialPrefab;
 	public Material whiteManeuverMaterialPrefab;
+
+	private GameObject shieldObject;
 
 	public GameObject protonTorpedoPrefab;
 	public GameObject laserPrefab;
@@ -26,9 +31,10 @@ public class Ship : MonoBehaviour {
 	private Player playerOwner;
 	public Player PlayerOwner{ get { return playerOwner; } set { playerOwner = value; } }
 
-	private IEnumerator maneuverRoutine;
+	public IEnumerator maneuverRoutine;
 
-	private bool isMoving = false;
+	[System.NonSerialized]
+	public bool isMoving = false;
 
 	private LineRenderer lineRenderer;
 	private List<Vector3> points;
@@ -37,6 +43,12 @@ public class Ship : MonoBehaviour {
 
 	[System.NonSerialized]
 	public static float attackRangeDelta = 10.0f;	//what is the radius of each attack field
+
+	[System.NonSerialized]
+	public bool phaseDutiesCompleted = false;
+
+	[System.NonSerialized]
+	public bool inAttackMode = false;
 
 	[System.NonSerialized]
 	public bool taggedAsPotentialTarget = false;
@@ -49,6 +61,12 @@ public class Ship : MonoBehaviour {
 
 	[System.NonSerialized]
 	public static float normalShipAltitude = -100.0f;
+
+	[System.NonSerialized]
+	public int damageBeingTaken = 0;
+
+	List<int> diceResults;
+	private int expectedNumDice;
 
 	public void GivePilot(string pilotName) {
 		//load the ship from the JSON, determined by the string of id in the json config file
@@ -78,6 +96,9 @@ public class Ship : MonoBehaviour {
 		points = new List<Vector3> ();
 
 		selectedTarget = GameObject.Find ("TestTarget");
+
+		shieldObject = transform.FindChild ("Shield").gameObject;
+		shieldObject.SetActive (false);
 		//Debug.Log (record.mongoDocument.name);
 	}
 
@@ -119,8 +140,12 @@ public class Ship : MonoBehaviour {
 			else
 			StartCoroutine (DoABarrelRoll (-1));
 		}
-		if (Input.GetKeyDown (KeyCode.Space)) {
+		if (Input.GetKeyDown (KeyCode.M)) {
 			StartCoroutine (DodgeAttackBarrelRolls());
+		}
+
+		if (Input.GetKeyDown (KeyCode.N)) {
+			StartCoroutine (FlickerShield ());
 		}
 	}
 
@@ -135,7 +160,100 @@ public class Ship : MonoBehaviour {
 
 			yield return new WaitForSeconds (0.05f);
 		}
+		//GameManager.Instance.ToggleTime ();
+	}
+		
+	void OnEnable() {
+		GetComponent<TapGesture> ().Tapped += SelectSelfAsTarget;
+	}
+
+
+	public IEnumerator EnterCombat() {
+		inAttackMode = true;
+		yield return StartCoroutine (ScanAttackRange ());
+		while (GameManager.Instance.focusedShip != this.gameObject) {
+			//wait for a target to be selected
+			yield return null;
+		}
+		selectedTarget = GameManager.Instance.focusedShip;
+		StartCoroutine (RollDice ("attack", record.mongoDocument.weapon));
+		//dice results will call declareAttack()
+
+	}
+
+	public void DeclareAttack() {
+		int totalAttackStrength = 0;
+		bool crit = false;
+		foreach (int i in diceResults) {
+			totalAttackStrength += i;
+			if (i > 1)
+				crit = true;
+		}
+
+		if (crit)
+			StartCoroutine (FireProtonTorpedos ());
+		else 
+			StartCoroutine (FireLazors ());
+
+		selectedTarget.GetComponent<Ship> ().DeclareDefense (totalAttackStrength, this.gameObject);
+	}
+
+	public void Defend() {
 		GameManager.Instance.ToggleTime ();
+
+		int totalDefenseStrength = 0;
+		foreach (int i in diceResults) {
+			totalDefenseStrength += i;
+		}
+
+		damageBeingTaken -= totalDefenseStrength;
+		if (damageBeingTaken <= 0) {
+			//dodged attack
+			StartCoroutine(DodgeAttackBarrelRolls());
+		} else {
+
+		TakeDamage (damageBeingTaken);
+		}
+	}
+
+	public void DeclareDefense(int attackStrength, GameObject attacker) {
+		//while distance of projectiles from self is greater than half of distance between us and focus player
+		float totalDistance = Vector3.Distance(transform.position, attacker.transform.position);
+
+
+		//while distance of projectiles from self is greater than half of distance between us and focus player
+		while (Vector3.Distance(GameObject.FindGameObjectWithTag("Munition").transform.position, transform.position) > totalDistance / 2) {
+			//do nothing
+		}
+		damageBeingTaken = attackStrength;
+
+		GameManager.Instance.ToggleTime ();
+		StartCoroutine (RollDice ("defend", record.mongoDocument.agility));
+	}
+
+
+
+	//glow the player
+	//set all the other ships in gamemanager's list as not targeted
+	void SelectSelfAsTarget (object sender, System.EventArgs e)
+	{
+		if (GameManager.Instance.MyGameState == GameState.CombatPhase) {
+			foreach (GameObject ship in GameManager.Instance.sortedShipList) {
+				ship.GetComponent<Ship> ().DeselectSelfAsTarget ();
+			}
+			GameManager.Instance.focusedShip = this.gameObject;
+
+			GetComponent<ParticleSystem> ().Stop ();
+		}
+	}
+
+	public void DeselectSelfAsTarget() {
+		//turns hue back to normal
+		GetComponent<ParticleSystem>().Play();
+	}
+
+	void OnDisable() {
+		GetComponent<TapGesture> ().Tapped -= SelectSelfAsTarget;
 	}
 
 	private IEnumerator FireProtonTorpedos() {
@@ -202,6 +320,7 @@ public class Ship : MonoBehaviour {
 				for (int h = 0; h < hits.Length; h++ ) {
 
 						hit = hits [h];
+					if (hit.transform.tag == "Ship") {
 						Debug.DrawLine (transform.position, hit.point);
 						//Debug.Log ("HIT SOMETHING! YAY1");
 						if (!hit.transform.gameObject.GetComponent<Ship> ().taggedAsPotentialTarget) {
@@ -210,7 +329,7 @@ public class Ship : MonoBehaviour {
 
 							potentialAttackTargets.Add (hit.transform.gameObject);
 						}
-
+					}
 				}
 
 
@@ -225,6 +344,7 @@ public class Ship : MonoBehaviour {
 		}
 
 		Debug.Log ("Done scanning all attack ranges");
+		lineRenderer.SetVertexCount (0);
 		yield return new WaitForSeconds (0.1f);
 
 	}
@@ -248,6 +368,7 @@ public class Ship : MonoBehaviour {
 		}
 
 		//if proton torpedos hit, show explosion damage
+		GameManager.Instance.focusedShip.GetComponent<Ship>().phaseDutiesCompleted = true;
 	}
 
 	//makes the material red (or probably just adds a particle effect)
@@ -262,8 +383,10 @@ public class Ship : MonoBehaviour {
 		return null;
 	}
 		
+	void OnDestroy() {
+		GameManager.Instance.ShipHasDied (this.gameObject);
 
-
+	}
 
 	void OnCollisionEnter (Collision coll) {
 
@@ -397,11 +520,34 @@ public class Ship : MonoBehaviour {
 	}
 
 	public IEnumerator RollDice(string attackOrDefend, int numDice) {
+		expectedNumDice = numDice;
+		diceResults = new List<int> (numDice);
 		for (int i = 0; i < numDice; i++) {
 			GameObject newDie = Instantiate(Resources.Load (attackOrDefend + "Die", typeof(GameObject))) as GameObject;
 			//GameObject newDie = Instantiate(Resources.Load ("attack_d-8_thickened", typeof(GameObject))) as GameObject;
 			newDie.GetComponent<Dice> ().Roll (transform.position + transform.forward * numDice * 10);
+			newDie.GetComponent<Dice> ().shipOwner = this.gameObject;
+			if (attackOrDefend == "attack")
+				newDie.GetComponent<Dice> ().attackDie = true;
 			yield return new WaitForSeconds (0.1f);
+		}
+	}
+
+	public void ReportDiceResults(int result) {
+		diceResults.Add (result);
+
+		if (inAttackMode) {
+			if (diceResults.Count >= expectedNumDice) {
+				//execute attack on targeted player
+				Debug.Log ("executing attack, sufficient dice collected");
+				DeclareAttack ();
+			}
+		} else {
+			if (diceResults.Count >= expectedNumDice) {
+				//execute attack on targeted player
+				Debug.Log ("defensive number of dice collected");
+				Defend ();
+			}
 		}
 	}
 
@@ -466,10 +612,39 @@ public class Ship : MonoBehaviour {
 			yield return new WaitForSeconds (0.0000001f);
 		}
 		*/
-		rb.AddForce (Vector3.forward * 1000 * direction);
+		rb.AddForce (transform.right * 1000 * direction);
 		rb.AddTorque (transform.forward * 10000 * direction);
 		yield return StartCoroutine(NormalizeBearingsDelay (duration));
 		//yield return null;
+	}
+
+	private IEnumerator FlickerShield() {
+
+		TurnOnShield ();
+
+		yield return new WaitForSeconds (0.5f);
+		TurnOffShield ();
+		yield return new WaitForSeconds (0.2f);
+
+		for (int i = 50; i > 0; i--) {
+			TurnOnShield ();
+			yield return new WaitForSeconds ((i )/ 500.0f);
+			TurnOffShield ();
+			yield return new WaitForSeconds ((i ) / 750.0f);
+
+		}
+
+		Debug.Log ("done");
+
+	}
+
+	private void TurnOnShield() {
+		shieldObject.SetActive (true);
+	}
+
+
+	private void TurnOffShield() {
+		shieldObject.SetActive (false);
 	}
 
 

@@ -6,6 +6,8 @@ using TouchScript.Gestures;
 using UnityEngine.UI;
 using SimpleJSON;
 using UnityEngine.SceneManagement;
+using System.Linq;
+using System.IO;
 
 public enum GameState {
 	None = 0,
@@ -52,10 +54,17 @@ public class GameManager : MonoBehaviour {
 	public AudioSource mainAudioSource;
 	public AudioClip starWarsIntroClip;
 	public AudioClip starWarsVaderThemeClip;
+	[System.NonSerialized]
+	public AudioClip currentClip;
 
 	[System.NonSerialized]
 	public List<GameObject> playerList = new List<GameObject> ();
+	[System.NonSerialized]
+	public List<GameObject> sortedShipList = new List<GameObject> ();
 	private GameObject playerManagerObject;
+
+	[System.NonSerialized]
+	public GameObject focusedShip;
 
 	string jsonURL = "10.0.1.130:8000/ships.json";
 
@@ -70,6 +79,8 @@ public class GameManager : MonoBehaviour {
 	private int maxNumPlayers = 5;
 	private int numPlayers = 2;
 	private int numPlayersJoined = 0;
+	private int numShips = 0;
+	//private bool readyToMoveOntoNextPhase = false;
 
 	private Slider playerNumSlider;
 	private Text playerNumUI;
@@ -81,6 +92,8 @@ public class GameManager : MonoBehaviour {
 	bool timeStopped = false;
 	List<GameObject> munitions = new List<GameObject> ();
 	List<Vector3> velocities = new List<Vector3> ();
+
+	
 
 	void Awake () {
 		if (Instance == null)
@@ -115,7 +128,6 @@ public class GameManager : MonoBehaviour {
 
 	public void SetPlayerNum() {
 		numPlayers =(int) (playerNumSlider.value * (float)maxNumPlayers + 1.0f);
-		Debug.Log ("num players: " + numPlayers.ToString ());
 		UpdatePlayerNumUI();
 	}
 
@@ -136,19 +148,16 @@ public class GameManager : MonoBehaviour {
 		yield return json;
 
 		masterJSON = JSON.Parse (json.text).AsObject;
-		Debug.Log("json loaded: " + masterJSON["ships"].ToString());
+		Debug.Log("JSON loaded!");
 	}
 
 	void OnLevelWasLoaded() {
-		Debug.Log ("preserved number of players as: " + numPlayers.ToString ());
 		InitializeGameManager ();
 	}
 
 	void InitializeGameManager(){
-
 		playerManagerObject = GameObject.Find ("PlayerManager");
 
-		Debug.Log ("initializing GameManager");
 		msgCanvas = GameObject.Find ("MsgCanvas");
 		mainCamera = GameObject.Find ("MainCamera").GetComponent<Camera> ();
 		mainAudioSource = GetComponent<AudioSource> ();
@@ -156,7 +165,6 @@ public class GameManager : MonoBehaviour {
 		waitingForText = GameObject.Find ("WaitingFor");
 
 		starsMaster = GameObject.Find ("Stars");
-		Debug.Log ("stars master: " + starsMaster.ToString ());
 		bigBangStars = starsMaster.transform.FindChild ("BigBang").gameObject;
 		actionStars = GameObject.Find ("ActionStars");
 		intro3DText = GameObject.Find ("Intro3DText");
@@ -203,11 +211,66 @@ public class GameManager : MonoBehaviour {
 			var doc = arg2;
 			if (doc.session_id == TabletopInitialization.Instance.sessionID) {
 				Debug.Log("creating player record handled from gamemanager");
-				GetComponent<GameManager>().CreateNewPlayer(doc);
+				//GetComponent<GameManager>().CreateNewPlayer(doc);
+				CreateNewPlayer(doc);
 			}
 		};
 
 		shipRecordGroup.didAddRecord += HandleDidAddShipRecord;
+		shipRecordGroup.didChangeRecord += HandleDidChangeShipRecord;
+		shipRecordGroup.didChangeRecord += HandleDidChangeShipRecord;
+
+
+	}
+		
+	//finds the ship and moves the corresponding ship
+	//looks at gamestate to determine which field we are looking for
+	void HandleDidChangeShipRecord (string arg1, ShipSchema arg2, IDictionary arg3, string[] arg4)
+	{
+		GameObject owner = playerList.Find (p => p.GetComponent<Player> ().playerID.Equals (arg2.owner));
+		GameObject ship_obj = owner.GetComponent<Player> ().shipsUnderCommand.Find (x => x.GetComponent<Ship> ().record.mongoDocument._id.Equals (arg2._id));
+		Debug.Log ("ship that was found when record changed: " + ship_obj.name + ", with id: " + ship_obj.GetComponent<Ship> ().record.mongoDocument._id);
+
+		Ship shipCraft = ship_obj.GetComponent<Ship> ();
+
+		switch (MyGameState) {
+		case GameState.PlanningPhase:		//looking for intended movements
+											//set selectedManeuver in ship object?
+			shipCraft.record.mongoDocument.selectedManeuver = arg2.selectedManeuver;
+			shipCraft.phaseDutiesCompleted = true;
+
+			break;
+		case GameState.ActivationPhase:		//looking for intended actions	
+											//set selectedAction in ship object?
+			shipCraft.record.mongoDocument.selectedAction = arg2.selectedAction;
+			shipCraft.phaseDutiesCompleted = true;
+
+			break;
+
+			//ship will update thier hull's damage and that will trigger this
+		case GameState.CombatPhase:			//rolling dice (probably not using in record change handler)
+			Debug.LogError("ship record changed during combat phase, hull took damage... :/");
+			//ships set their own phasedutiescompleted to true
+			break;
+		default:
+			Debug.Log ("ship record changed in game state: " + MyGameState.ToString ());
+			break;
+		}
+
+
+
+		bool nextPhase = true;	//readyToMoveOntoNextPhase;
+		//checks if all players are ready to move on, if so, advanceGameState();
+		foreach( GameObject ply in playerList) {
+			foreach (GameObject shipObj in ply.GetComponent<Player>().shipsUnderCommand) {
+				nextPhase = nextPhase && shipObj.GetComponent<Ship> ().phaseDutiesCompleted;
+			}
+		}
+
+		if (nextPhase) {
+			AdvanceGameState ();
+		}
+
 	}
 
 	void HandleDidAddShipRecord (string arg1, ShipSchema arg2)
@@ -230,6 +293,7 @@ public class GameManager : MonoBehaviour {
 	//functions that show how to 'give' players objects
 	//instantiates ship and creates the game object from the shiprecord
 	void giveShipToPlayer(Player ply, PrizmRecord<ShipSchema> shipRecord) {
+		numShips++;
 		Debug.Log ("in giveshiptoplayer(), shiprecord.name: " + shipRecord.mongoDocument.name.ToString ());
 		//Debug.Log ("now, the schema: " + shipRecord.mongoDocument.ToString());
 		//Debug.Log ("now, the list: " + shipRecord.mongoDocument.pilots.ToString ());
@@ -243,7 +307,7 @@ public class GameManager : MonoBehaviour {
 
 
 		//give database items
-		ship_obj.GetComponent<Ship> ().record = shipRecord;	//maybe this will work?
+		ship_obj.GetComponent<Ship> ().record = shipRecord;
 		ship_obj.GetComponent<Ship>().AnnounceSelf();
 
 		//give pilot
@@ -345,8 +409,17 @@ public class GameManager : MonoBehaviour {
 		if (Input.GetKeyDown (KeyCode.D)) {
 			ToggleTime ();
 		}
+		if (Input.GetKeyDown (KeyCode.F)) {
+			CreateSortedListShips ();
+			foreach (GameObject ship in sortedShipList) {
+				Debug.Log ("ship name: " + ship.name);
+			}
+		}
 		if (Input.GetKeyDown (KeyCode.Space)) {
-			
+			PlayAudioChance ("Music", "DarthVader", 0.90f);
+		}
+		if (Input.GetKeyDown (KeyCode.Z)) {
+			PlayAudioChance ("SHIPS_EFFECTS/Move", chance: 0.90f);
 		}
 	}
 
@@ -425,15 +498,7 @@ public class GameManager : MonoBehaviour {
 	}
 
 	public void AdvanceGameState() {
-		//remember to give a UI text indication that sthe stage is advancing
 
-
-		MyGameState++;
-		Debug.Log ("Game State Advance: " + MyGameState.ToString () + " out of: " + System.Enum.GetValues (typeof(GameState)).Length.ToString ());
-
-		if ((int)MyGameState > System.Enum.GetValues (typeof(GameState)).Length - 1) {
-			MyGameState = GameState.PlanningPhase;
-		}
 
 		switch (MyGameState) {
 		case GameState.WaitingForPlayersEnter:
@@ -441,9 +506,11 @@ public class GameManager : MonoBehaviour {
 			break;
 		case GameState.WaitingForPlayersChooseShip:
 			//Debug.Log ("players choosing ship");
-			StartCoroutine(IntroduceWorld ());
+			StartCoroutine (IntroduceWorld ());
+			CreateSortedListShips ();
 			break;
 		case GameState.PlanningPhase:
+			StartCoroutine (ExecuteAllShipsManeuvers ());
 			Debug.Log ("players are planning");
 			break;
 		case GameState.ActivationPhase:
@@ -451,22 +518,152 @@ public class GameManager : MonoBehaviour {
 			break;
 		case GameState.CombatPhase:
 			Debug.Log ("entering combat phase");
+			StartCoroutine (ExecuteAllShipsCombat ());
 			break;
 		case GameState.EndPhase:
 			Debug.Log ("cleanup phase");
 			//check if all ships of one faction are dead
+			CheckWinCondition();
 			break;
 		default:
 			Debug.LogError("game state unstable!" + MyGameState.ToString());
 			break;
 		}
+
+		//advance game state at end (take care of work of what game state we are currently in at advance gamestate())
+		MyGameState++;
+		Debug.Log ("Game State Advance: " + MyGameState.ToString () + " out of: " + System.Enum.GetValues (typeof(GameState)).Length.ToString ());
+
+		if ((int)MyGameState > System.Enum.GetValues (typeof(GameState)).Length - 1) {
+			MyGameState = GameState.PlanningPhase;
+		}
+
+		foreach (GameObject ship in sortedShipList) {
+			ship.GetComponent<Ship> ().phaseDutiesCompleted = false;
+		}
+
+		//remember to give a UI text indication that sthe stage is advancing
+		//make this ui notice look nicer?
+
+		createMsgLog ("Now entering game state: " + MyGameState.ToString ());
+
+	}
+
+	private void CheckWinCondition() {
+		string winningFaction = sortedShipList[0].GetComponent<Ship>().record.mongoDocument.faction;
+		foreach (GameObject go in sortedShipList) {
+			if (winningFaction != go.GetComponent<Ship> ().record.mongoDocument.faction) {
+				return;
+			}
+		}
+
+		createMsgLog ("GAMEOVER! THE " + winningFaction + " has taken victory this time");
+	}
+
+	//removes the ship that died, checks win condition
+	public void ShipHasDied(GameObject shipThatDied) {
+		sortedShipList.Remove (shipThatDied);
+		CheckWinCondition ();
+	}
+
+	private IEnumerator ExecuteAllShipsCombat() {
+		foreach (GameObject craft in sortedShipList) {
+			StartCoroutine(craft.GetComponent<Ship>().EnterCombat());
+			if (craft.GetComponent<Ship> ().record.mongoDocument.faction == "dark")
+				PlayAudioChance ("Music", "DarthVader", 0.80f);
+			while (!craft.GetComponent<Ship> ().phaseDutiesCompleted) {
+				yield return null;
+			}
+		}
+	}
+
+	private IEnumerator ExecuteAllShipsManeuvers() {
+		foreach (GameObject craft in sortedShipList) {
+			focusedShip = craft;
+			StartCoroutine(craft.GetComponent<Ship>().maneuverRoutine);
+			while (craft.GetComponent<Ship> ().isMoving) {
+				yield return null;
+			}
+		}
+	}
+
+	public void PlayAudioChance (string folder, string specificTrack = null, float chance = 0.20f, float volume = 1.0f) {
+
+		string path = "Audio/" + folder;
+
+		if (Random.value < chance) {
+			if (specificTrack != null) {		//load that specific track
+				Debug.Log("loading from: " + path + "/" + specificTrack);
+				currentClip = Resources.Load(path + "/" + specificTrack, typeof(AudioClip)) as AudioClip;
+				mainAudioSource.clip = currentClip;
+				mainAudioSource.volume = volume;
+				mainAudioSource.Play ();
+			} else {		//find random track from folder
+				int randomClip = Random.Range (0, CountNumClips (folder));
+				Debug.Log ("random clip playing is: " + randomClip.ToString ());
+				currentClip = Resources.Load(path + "/" + GetFileName(path, randomClip), typeof(AudioClip)) as AudioClip;
+				mainAudioSource.clip = currentClip;
+				mainAudioSource.volume = volume;
+				mainAudioSource.Play ();
+			}
+		}
+	}
+
+	public void PlayAudioChanceAtPoint (Vector3 position, string folder, string specificTrack = null, float chance = 0.20f, float volume = 1.0f) {
+
+		string path = "Audio/" + folder;
+
+		if (Random.value < chance) {
+			if (specificTrack != null) {		//load that specific track
+				Debug.Log("loading from: " + path + "/" + specificTrack);
+				currentClip = Resources.Load(path + "/" + specificTrack, typeof(AudioClip)) as AudioClip;
+				AudioSource.PlayClipAtPoint (currentClip, position);
+			} else {		//find random track from folder
+				int randomClip = Random.Range (0, CountNumClips (folder));
+				Debug.Log ("random clip playing is: " + randomClip.ToString ());
+				currentClip = Resources.Load(path + "/" + GetFileName(path, randomClip), typeof(AudioClip)) as AudioClip;
+				AudioSource.PlayClipAtPoint (currentClip, position);
+			}
+		}
+	}
+
+	private string GetFileName(string folder, int index) {
+		DirectoryInfo levelDirectoryPath = new DirectoryInfo (Application.dataPath + "/Resources/" + folder);
+		FileInfo[] fileInfo = levelDirectoryPath.GetFiles ("*.*", SearchOption.AllDirectories);
+		return fileInfo [index * 2].Name.Substring(0,fileInfo [index * 2].Name.Length - 4);
+	}
+
+	//returns number of resources in a particular folder in Resources/
+	public int CountNumClips(string folderName) {
+		DirectoryInfo levelDirectoryPath = new DirectoryInfo (Application.dataPath + "/Resources/Audio/" + folderName);
+		FileInfo[] fileInfo = levelDirectoryPath.GetFiles ("*.*", SearchOption.AllDirectories);
+		int num = 0;
+		foreach (FileInfo file in fileInfo) {
+			if (file.Extension != ".meta") {
+				num++;
+			}
+		}
+		return num;
+	}
+
+
+		
+
+	private void CreateSortedListShips() {
+		List<GameObject> randomShipList = new List<GameObject> ();
+		foreach( GameObject ply in playerList) {
+			foreach (GameObject shipObj in ply.GetComponent<Player>().shipsUnderCommand) {
+				randomShipList.Add (shipObj);
+			}
+		}
+
+		sortedShipList = randomShipList.OrderBy (obj => obj.GetComponent<Ship>().myPilot.skill).ToList();
 	}
 
 	//called on when a player record is added
 	public void CreateNewPlayer(PlayerSchema playerToCreate) {
 		createMsgLog (playerToCreate.name + " has joined the game!");
-		
-		//Debug.Log("creating new player in: " + playerToCreate.faction);
+
 		//instantiate player prefab
 		GameObject newPlayer = Instantiate(playerPrefab) as GameObject;
 		newPlayer.GetComponent<Player> ().record.mongoDocument = playerToCreate;
@@ -499,7 +696,7 @@ public class GameManager : MonoBehaviour {
 			}
 		}
 
-		Debug.Log ("player lost connection, object is: " + id);
+		Debug.LogError ("player lost connection, object is: " + id);
 	}
 
 
@@ -510,8 +707,6 @@ public class GameManager : MonoBehaviour {
 		Vector3 newPos;
 		Vector3 cameraSetPosition = mainCamera.transform.position;
 		newPos = mainCamera.transform.position;
-		Debug.Log (newPos.ToString ());
-
 		for (int i = 0; i < iterations; i++) {
 
 			newPos.x = Mathf.PerlinNoise (newPos.x * minPerlin, newPos.x * maxPerlin) - 0.5f;
@@ -688,7 +883,7 @@ public class GameManager : MonoBehaviour {
 		var methodCall = Meteor.Method<ChannelResponse>.Call ("endTabletopSession", GameObject.Find ("GameManager").GetComponent<TabletopInitialization>().sessionID);
 		yield return (Coroutine)methodCall;
 	}
-
+		
 
 
 

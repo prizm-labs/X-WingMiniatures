@@ -7,11 +7,11 @@ public enum defendDiceSides {blank=0, focus, evade};
 
 public class Dice : MonoBehaviour {
 
-	bool first = true;
 	bool stabilized = false;
 
 
-
+	[System.NonSerialized]
+	public bool attackDie = false;
 
 	Rigidbody rb;
 	[System.NonSerialized]
@@ -20,6 +20,9 @@ public class Dice : MonoBehaviour {
 	public float forceMultiplier = 250.0f;
 	[System.NonSerialized]
 	public float timeToLive = 4.0f;	//4 seconds
+
+	[System.NonSerialized]
+	public GameObject shipOwner;
 
 	void Awake () {
 		rb = GetComponent<Rigidbody> ();
@@ -46,6 +49,10 @@ public class Dice : MonoBehaviour {
 		foreach (Transform child in transform.GetChild(0)) {
 			if (child.GetComponent<DiceShell> ().isThisTheChosenOne) {
 				Debug.Log ("chosen one found!: " + child.GetComponent<Renderer> ().material.name.ToString());
+				if (attackDie)
+					shipOwner.GetComponent<Ship> ().ReportDiceResults ((int)System.Enum.Parse (typeof(attackDiceSides), child.GetComponent<Renderer> ().material.name.ToString ()));
+				else 
+					shipOwner.GetComponent<Ship> ().ReportDiceResults ((int)System.Enum.Parse (typeof(defendDiceSides), child.GetComponent<Renderer> ().material.name.ToString ()));
 			}
 		}
 		StartCoroutine (KillAfterTime (timeToLive));
@@ -63,12 +70,14 @@ public class Dice : MonoBehaviour {
 		//StartCoroutine (DoubleRoll ());
 	}
 
+	/*
 	public IEnumerator DoubleRoll() {
 		yield return new WaitForSeconds (1.5f);
 		Debug.Log ("doubleRolling: ");
 		Vector3 forceVector = new Vector3 (Random.Range(-1, 1), Random.Range(-1, 1), Random.Range(-1, 1)) * forceMultiplier;
 		rb.AddForce (forceVector);
 	}
+	*/
 
 	private IEnumerator KillAfterTime(float ttl) {
 		yield return new WaitForSeconds (ttl);
