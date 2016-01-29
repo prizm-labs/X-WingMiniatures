@@ -78,19 +78,19 @@ public class TabletopInitialization : MonoBehaviour {
 	public IEnumerator MeteorInit() {
 		
 		Meteor.LiveData.Instance.DidConnect += (string connectionID) => {	//recieved DDPConnectionID from Meteor
-			Debug.Log("METEORCONNECTION TRIGGERED!!!!!!!!");
+			//Debug.Log("METEORCONNECTION TRIGGERED!!!!!!!!");
 			DDPConnectionID = connectionID;
-			Debug.Log ("received ddpconnectionID: " + DDPConnectionID);		//is this the same ddpconnectionID that is returned by bindClientToDDPConnection?
-			
+			//Debug.Log ("received ddpconnectionID: " + DDPConnectionID);		//is this the same ddpconnectionID that is returned by bindClientToDDPConnection?
+
 			readyToBindDDP = true;
 		};
 		
-		Debug.Log ("didconnect handler is added");
+		//Debug.Log ("didconnect handler is added");
 		
 		
-		Debug.LogError ("connecting to meteor");
+		//Debug.Log ("connecting to meteor");
 		yield return Meteor.Connection.Connect (meteorURL);		//establish initial connection to database
-		Debug.LogError ("past Meteor.connect");
+		//Debug.Log ("past Meteor.connect");
 		
 		//yield return StartCoroutine (SetGameName ());
 		//broadcasts session name so HH can connect to IP
@@ -116,21 +116,26 @@ public class TabletopInitialization : MonoBehaviour {
 			var doc = arg2;
 			Debug.Log("player added to playercollection.  this is PSA from tabletopinitilization.cs");
 			if (doc.session_id == sessionID) {
-				//GetComponent<GameManager>().CreateNewPlayer(doc);
-				Debug.Log("belongs to us!");
+				GetComponent<GameManager>().CreateNewPlayer(doc);
+				//Debug.Log("belongs to us!");
 			}
 		};
 		
 		playerCollection.DidRemoveRecord += gameManager.HandleDidLosePlayer;
 		channelCollection.DidChangeRecord += HandleDidChangeRecordSync;		//allows HH to gamesync routine with TT
-		
+
+
+		yield return StartCoroutine (ConfigureShipDatabase ());
+
+
+
 		////yield return StartCoroutine(GivePlayerStartingItems ());
 		Debug.Log ("Done with MeteorInit");
 	}
 		
 
 	public IEnumerator ConfigureShipDatabase(){
-		Debug.Log ("Loading all available ship configurations from configuration JSON");
+		Debug.Log ("Trying to create ship collection");
 		shipRecordGroup = new PrizmRecordGroup<ShipSchema> (sessionID, "shipYard");
 		yield return StartCoroutine (shipRecordGroup.CreateMeteorCollection ());
 		Debug.Log ("CREATED OUR METEOR COLLECTION FOR the ships");
@@ -138,15 +143,25 @@ public class TabletopInitialization : MonoBehaviour {
 
 		//set up handlers
 		shipRecordGroup.mongoCollection.DidAddRecord += (string arg1, ShipSchema arg2) => {
-			Debug.Log ("New Resource Card Added! "+arg1 +" ID is: "+arg2._id+" rest is: " + arg2.ToString());
+			Debug.Log ("New Ship Added! "+arg1 +" ID is: "+arg2._id+" name is: " + arg2.name);
 			
 			PrizmRecord<ShipSchema> record = shipRecordGroup.LookUpPrizmRecordBy_ID(arg2._id);
-			GameObject obj = record.gameObject;
-			// ...do something with GameObject
-			//idk, maybe give it to a player
+			if(record == null) {
+				Debug.Log("record is null, the record was created by the server");
+				PrizmRecord<ShipSchema> newRecord = new PrizmRecord<ShipSchema>();
 
-			if(record == null) return; //didn't find the record in the recordgroup
-			//otherwise pretty much make references, etc.
+				newRecord.mongoDocument = arg2;
+
+				newRecord.recordGroup = shipRecordGroup;
+				newRecord.mongoDocument._GUID = System.Guid.NewGuid ();
+				newRecord.mongoDocument.key = shipRecordGroup.collectionKey;
+
+				Debug.Log("checking new recor'ds owner: " + newRecord.mongoDocument.owner);
+
+				shipRecordGroup.associates.Add(newRecord);
+			}
+
+			//instantiate the ship
 		};
 		
 		shipRecordGroup.mongoCollection.DidChangeRecord += (string arg1, ShipSchema arg2, IDictionary arg3, string[] arg4) => {
@@ -165,6 +180,9 @@ public class TabletopInitialization : MonoBehaviour {
 		
 		//make like 2 ships instantiated in database
 		//load all from json l8tr g8tr
+
+
+		/*
 		for (int i=0; i<2; i++) {
 			Debug.Log ("Trying to make a bunch of WHEAT! lol jk, im makin ships");
 			PrizmRecord<ShipSchema> shipRecord = new PrizmRecord<ShipSchema>();
@@ -175,12 +193,9 @@ public class TabletopInitialization : MonoBehaviour {
 
 
 			yield return StartCoroutine (shipRecordGroup.AddRecord (shipRecord));
-			while (shipRecord.gameObject==null){
-				Debug.Log ("waiting for database confirmation");
-				//the addrecord handler should take care of this
-				yield return null;
-			}
 		}
+	*/
+
 
 		yield return null;
 	}
@@ -425,17 +440,17 @@ public class TabletopInitialization : MonoBehaviour {
 
 	//establishes DDP connection
 	IEnumerator BindDDPConnection() {
-		Debug.Log ("in BindDDPConnection(), connectionID is: " + DDPConnectionID);
+		//Debug.Log ("in BindDDPConnection(), connectionID is: " + DDPConnectionID);
 		var methodCall = Meteor.Method<ChannelResponse>.Call ("bindClientToDDPConnection", clientID, DDPConnectionID);
 		yield return (Coroutine)methodCall;
 		
 		if (methodCall.Response.success) {
-			Debug.Log ("call to bindClientToDDPConnection SUCCEEDED!, response: " + methodCall.Response.message);
+			//Debug.Log ("call to bindClientToDDPConnection SUCCEEDED!, response: " + methodCall.Response.message);
 			DDPConnectionID = methodCall.Response.message;
 		} else {
-			Debug.Log("call to 'bindClientToDDPConnection' did not succeed.");
+			Debug.LogError("call to 'bindClientToDDPConnection' did not succeed.");
 		}
-		Debug.Log ("out of BindDDPConnection()");
+		//Debug.Log ("out of BindDDPConnection()");
 	}
 	
 	//update session status to 'msg' (i.e. 'allPaired')
@@ -468,23 +483,23 @@ public class TabletopInitialization : MonoBehaviour {
 	
 	//calls openTabletopSession on meteor, stores the sessionID and clientID	
 	IEnumerator OpenSession() {
-		Debug.Log ("Calling 'openTableTopSession' :" + appID + " " + deviceID);
+		//Debug.Log ("Calling 'openTableTopSession' :" + appID + " " + deviceID);
 		var methodCall = Meteor.Method<OpenSessionResponse>.Call ("openTabletopSession", appID, deviceID);
 		yield return (Coroutine)methodCall;
-		Debug.Log ("Called 'openTabletopsession' ");
+		//Debug.Log ("Called 'openTabletopsession' ");
 		
 		// Get the value returned by the method.
 		if (methodCall.Response.success) {
-			Debug.Log ("Open Session succeeded!" + "clientID: " + methodCall.Response.clientID + ", sessionID: " + methodCall.Response.sessionID + ", name: " + methodCall.Response.sessionName);
+			//Debug.Log ("Open Session succeeded!" + "clientID: " + methodCall.Response.clientID + ", sessionID: " + methodCall.Response.sessionID + ", name: " + methodCall.Response.sessionName);
 			clientID = methodCall.Response.clientID;
 			sessionID = methodCall.Response.sessionID;
 			sessionName = methodCall.Response.sessionName;
 			gameName = methodCall.Response.sessionName;
-			Debug.Log ("gameName set: " + gameName);
+			//Debug.Log ("gameName set: " + gameName);
 			GameObject.Find ("NameCanvas").transform.FindChild ("SessionName").gameObject.GetComponent<Text> ().text = sessionName + "\nIP Address: '" + GetIP() +"'";
 
 			if (readyToBindDDP) {
-				Debug.Log ("calling bindddp connection with: " + DDPConnectionID);
+				//Debug.Log ("calling bindddp connection with: " + DDPConnectionID);
 			StartCoroutine (BindDDPConnection ());		//binds low-level DDP connection
 			}
 
@@ -607,7 +622,7 @@ public class TabletopInitialization : MonoBehaviour {
 	IEnumerator Subscribe() {
 		var subscription = Meteor.Subscription.Subscribe ("tabletopBootstrap", sessionID, clientID);
 		yield return (Coroutine)subscription;	//wait until subscription successful
-		Debug.Log ("Subscribe() in TabletopInitilization finished");
+		//Debug.Log ("Subscribe() in TabletopInitilization finished");
 		gameManager.createMsgLog ("Subscribe() in TabletopInitilization finished");
 	}
 	
@@ -649,14 +664,14 @@ public class TabletopInitialization : MonoBehaviour {
 
 	private void StartServer() {
 		Network.InitializeServer (32, 25000, !Network.HavePublicAddress ());
-		Debug.Log ("starting server: " + typeName + ": " + gameName);
+		//Debug.Log ("starting server: " + typeName + ": " + gameName);
 		MasterServer.RegisterHost (typeName, gameName);
 	}
 
 	void OnServerInitialized() {
-		Debug.Log ("Server initialized");
-		Debug.Log ("Server master ip address: " + MasterServer.ipAddress + " , our local IP: " + GetIP ());
-		GameObject.Find ("NameCanvas").transform.FindChild ("IPAddress").gameObject.GetComponent<Text> ().text = "IP Address:'" + GetIP() + ":8100'";
+		//Debug.Log ("Server initialized");
+		//Debug.Log ("Server master ip address: " + MasterServer.ipAddress + " , our local IP: " + GetIP ());
+		//GameObject.Find ("NameCanvas").transform.FindChild ("IPAddress").gameObject.GetComponent<Text> ().text = "IP Address:'" + GetIP() + ":8100'";
 		gameManager.createMsgLog ("Connected to master server");
 	}
 	

@@ -50,9 +50,9 @@ where TMongoDocument : MongoSchema, new() {
 	}
 
 	private void bindRecord (TMongoDocument mongoDoc) {
-
+		Debug.Log ("before");
 		PrizmRecord<TMongoDocument> unboundRecord = unboundAssociates[mongoDoc._GUID];
-
+		Debug.Log ("before");
 		unboundRecord.mongoDocument._id = mongoDoc._id;
 		unboundRecord.mongoDocument.key = this.collectionKey;
 
@@ -60,6 +60,7 @@ where TMongoDocument : MongoSchema, new() {
 	}
 
 	public IEnumerator AddRecord (PrizmRecord<TMongoDocument> record) {
+		Debug.Log ("trying to add record");
 
 		record.recordGroup = this;
 		record.mongoDocument._GUID = System.Guid.NewGuid ();
@@ -169,36 +170,38 @@ where TMongoDocument : MongoSchema, new() {
 		var methodCall = Meteor.Method<ChannelResponse>.Call ("createGameObjectCollection", this.sessionID, collectionKey);
 		yield return (Coroutine)methodCall;
 
-		Debug.Log ("After createGameObjectCollection");
 
 		var initMethodCall = Meteor.Method<ChannelResponse>.Call ("initGameObjectCollections", collectionKey);
 		yield return (Coroutine)initMethodCall;
 
 
-		Debug.Log ("After initGameObjectCollections");
-
 		var subscription = Meteor.Subscription.Subscribe ("gameObjectCollection", collectionKey);
 		yield return (Coroutine)subscription;	//wait until subscription successful
 
-		Debug.Log ("After subscribe to new GO collection ");
 
 		mongoCollection = Meteor.Collection <TMongoDocument>.Create (this.collectionKey);
 
 		yield return mongoCollection;
 
 		mongoCollection.DidAddRecord += (string arg1, TMongoDocument arg2) => { 
-			Debug.Log ("binding record: "+arg1);
-			// there should be one unbound record
-			bindRecord (arg2);
+			//we only need to bind the record if the object was created by Tabletop and hasn't been bound.
+			try {
+				bindRecord (arg2); 
+			}
+			catch (KeyNotFoundException e) {
+				Debug.Log("didn't find the record guid, assuming dont have to bind (object wasn't in the unbound things)");
+			}
+
 		};
 
 		mongoCollection.DidRemoveRecord += (string obj) => {
 			PrizmRecord<TMongoDocument> record = this.LookUpPrizmRecordBy_ID(obj);
-			record.WasRemovedByServer = true;
+			if (record != null)
+				record.WasRemovedByServer = true;
+			else 
+				Debug.Log("record wasn't associated with us");
 //			if (record != null) CoroutineHost.Instance.StartCoroutine (RemoveRecord(record));
 		};
-
-		Debug.Log ("After create local GameObjectCollection");
 
 	}
 

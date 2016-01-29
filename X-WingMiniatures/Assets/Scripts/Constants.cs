@@ -34,29 +34,31 @@ public class PlayerSchema: MongoSchema {
 }
 
 public class ShipSchema: MongoSchema {
-	public string name;
-	public string owner;
-	public int weapon;
-	public int agility;
-	public int shield;
-	public int hull;
-	public string faction;
-	public bool isStressed;
-	public string selectedPilot;
-	public int cost;
-	public List<string> upgrades = new List<string> ();
+	public string name = "";
+	public string owner = "";
+	public int weapon = 0;
+	public int agility = 0;
+	public int shield = 0;
+	public int hull = 0;
+	public string faction = "";
+	public bool isStressed = false;
+	public string selectedPilot = "";
+	public int cost = 0;
+	public string upgrades = "";
 
-	public List<string> actions = new List<string>();
-	public string selectedAction;
+	public string actions = "";
+	public string selectedAction  = "";
 
-	public string selectedManeuver;
-	public List<string> maneuvers; 	//json array of json objects
+	public string selectedManeuver = "";
+	public string maneuvers = ""; 	//json array of json objects
+
+	public string selectedUpgrades = "";
 	/*
 	"manuevers":[
 		{ "speed":1,"direction":"left","difficulty":0 },
 	]
 	*/
-	public string pilots;	//json array of json objects
+	public string pilots = "";	//json array of json objects
 	/*
 	 "pilots":[
        {
@@ -70,7 +72,33 @@ public class ShipSchema: MongoSchema {
      */
 
 	public override Dictionary<string, object> toDictionary() {
-		Dictionary<string, object> dictionary = new Dictionary<string, object> () {
+
+		Dictionary<string, object> dictionary = new Dictionary<string, object> ();
+
+		dictionary.Add("key",key);
+		dictionary.Add("_GUID", _GUID);
+		dictionary.Add("name", name);
+		dictionary.Add("owner", owner);
+		dictionary.Add("weapon", weapon.ToString());
+		dictionary.Add("agility", agility.ToString());
+		dictionary.Add("shield", shield.ToString());
+		dictionary.Add("hull", hull.ToString());
+		dictionary.Add("faction", faction);
+		dictionary.Add("isStressed", isStressed);
+		dictionary.Add("selectedPilot", selectedPilot);
+		dictionary.Add("cost", cost.ToString());
+
+		dictionary.Add("upgrades", upgrades.ToString());
+		dictionary.Add("actions", actions.ToString());
+
+		dictionary.Add("selectedAction", selectedAction);
+		dictionary.Add("selectedManeuver", selectedManeuver);
+		dictionary.Add("maneuvers", maneuvers.ToString());
+		dictionary.Add ("pilots", pilots.ToString ());
+
+		/*
+		{
+
 			{"key",key},
 			{"_GUID", _GUID},
 			{"name", name},
@@ -93,6 +121,8 @@ public class ShipSchema: MongoSchema {
 			{"pilots", pilots.ToString()}
 
 		} ;	
+
+*/
 		return dictionary;
 	}
 }

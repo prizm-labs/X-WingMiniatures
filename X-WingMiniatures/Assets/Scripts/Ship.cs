@@ -70,31 +70,18 @@ public class Ship : MonoBehaviour {
 	private int expectedNumDice;
 
 	public void GivePilot(string pilotName) {
-		//load the ship from the JSON, determined by the string of id in the json config file
-		//Debug.Log("in givepilot: " + pilotName);
-		//Debug.Log ("has record? " + record.ToString ());
-		//Debug.Log ("has pilot list?: " + record.mongoDocument.pilots.ToString ());
 		foreach (JSONNode jo in JSON.Parse(record.mongoDocument.pilots).AsArray) {
-			//Debug.Log ("looping thru: " + jo.ToString());
-			Debug.Log ("comparing:" + jo ["name"].Value.ToString () + "to:" + pilotName);
 			if (jo ["name"].Value.ToString() == pilotName) {
-				//Debug.Log ("found him!: " + pilotName);
-				Debug.Log ("object data of skill: " + jo["skill"].Value.ToString ());
 				myPilot = new Pilot (jo);
 				break;
 			}
 		}
-
-		Debug.Log ("playing audio clip for: " + pilotName);
+			
 		if (DoesPilotHaveAudio (pilotName))
 			GameManager.Instance.PlayAudioChanceAtPoint (pilotName.Replace (" ", string.Empty), chance: 0.98f);
 		else
 			GameManager.Instance.PlayAudioChanceAtPoint ("OnGameEnter/" + record.mongoDocument.faction, chance: 0.98f);
 
-		Debug.Log ("my pilot's skill: " + myPilot.skill.ToString ());
-
-		//Debug.Log ("found pilot, done giving ship a pilto");
-		//Debug.Log ("pilot's stats: " + myPilot.name + ":"+ myPilot.ability + ":" + myPilot.skill.ToString());
 	}
 
 	void Awake() {
@@ -110,7 +97,6 @@ public class Ship : MonoBehaviour {
 		shieldObject.SetActive (false);
 
 		GetComponent<ParticleSystem> ().Stop ();
-		//Debug.Log (record.mongoDocument.name);
 	}
 
 	void Update() {
@@ -123,11 +109,9 @@ public class Ship : MonoBehaviour {
 			StartCoroutine(RollDice ("defend", 2));
 		}
 		if (Input.GetKeyDown (KeyCode.I)) {
-			//Debug.Log ("Trying to draw bezier path for ship");
 			maneuverRoutine = ExecuteManeuver("{\"speed\":\"5\",\"direction\":\"straight\",\"difficulty\":\"0\"}");
 
 			//StartCoroutine(maneuverRoutine);
-			//and then send signal to game manager that this ship is done, advance to next one.
 		}
 			
 		if (Input.GetKeyDown (KeyCode.U)) {
@@ -187,13 +171,18 @@ public class Ship : MonoBehaviour {
 	public IEnumerator EnterCombat() {
 		inAttackMode = true;
 		yield return StartCoroutine (ScanAttackRange ());
-		while (GameManager.Instance.focusedShip != this.gameObject) {
+		while (GameManager.Instance.focusedShip != this.gameObject && inAttackMode) {
 			//wait for a target to be selected
 			yield return null;
 		}
-		selectedTarget = GameManager.Instance.focusedShip;
-		StartCoroutine (RollDice ("attack", record.mongoDocument.weapon));
-		//dice results will call declareAttack()
+
+		if (inAttackMode) {
+			selectedTarget = GameManager.Instance.focusedShip;
+			StartCoroutine (RollDice ("attack", record.mongoDocument.weapon));
+			//dice results will call declareAttack()
+		} else {
+			phaseDutiesCompleted = true;
+		}
 
 	}
 
@@ -317,16 +306,19 @@ public class Ship : MonoBehaviour {
 		for (int j = 1; j < 4; j++) {
 			for (int i = (int) (transform.eulerAngles.y + 45); i > (int) (transform.eulerAngles.y - 45); i--) {
 
+				Vector3 selfOrigin = transform.position + transform.forward * 5;
 				//should go through multiple targets
-				hits = Physics.RaycastAll (transform.position, Quaternion.AngleAxis (i, Vector3.up) * Vector3.forward, j * attackRangeDelta);
+				hits = Physics.RaycastAll (selfOrigin, Quaternion.AngleAxis (i, Vector3.up) * Vector3.forward, j * attackRangeDelta);
 
 				for (int h = 0; h < hits.Length; h++ ) {
 
 						hit = hits [h];
 					if (hit.transform.tag == "Ship") {
-						Debug.DrawLine (transform.position, hit.point);
+						//Debug.DrawLine (transform.position, hit.point);
 						//Debug.Log ("HIT SOMETHING! YAY1");
-						if (!hit.transform.gameObject.GetComponent<Ship> ().taggedAsPotentialTarget) {
+						//has to not already be in list, not already be tagged, not be in the same faction
+						if (!hit.transform.gameObject.GetComponent<Ship> ().taggedAsPotentialTarget && !potentialAttackTargets.Contains(hit.transform.gameObject) 
+								&& hit.transform.gameObject.GetComponent<Ship> ().record.mongoDocument.faction != record.mongoDocument.faction) {
 							hit.transform.gameObject.GetComponent<Ship> ().taggedAsPotentialTarget = true;
 							hit.transform.gameObject.GetComponent<Ship> ().ShowAsAvailableTarget ();
 
@@ -338,16 +330,20 @@ public class Ship : MonoBehaviour {
 
 				//draw a line segment
 				lineRenderer.SetVertexCount(2);
-				lineRenderer.SetPosition (0, transform.position);
-				lineRenderer.SetPosition (1, transform.position + (Quaternion.AngleAxis (i, Vector3.up) * Vector3.forward) * j * attackRangeDelta);
+				lineRenderer.SetPosition (0, selfOrigin);
+				lineRenderer.SetPosition (1, selfOrigin + (Quaternion.AngleAxis (i, Vector3.up) * Vector3.forward) * j * attackRangeDelta);
 
-				yield return new WaitForSeconds (0.01f);
+				yield return new WaitForSeconds (0.005f);
 
 			}
 		}
 
 		Debug.Log ("Done scanning all attack ranges");
 		lineRenderer.SetVertexCount (0);
+
+		if (potentialAttackTargets.Count == 0) {
+			inAttackMode = false;
+		}
 		yield return new WaitForSeconds (0.1f);
 
 	}
@@ -448,7 +444,6 @@ public class Ship : MonoBehaviour {
 
 	public IEnumerator ExecuteManeuver(string json) {
 		isMoving = true;
-		Debug.Log ("in maneuver");
 
 		GameManager.Instance.PlayAudioChanceAtPoint (record.mongoDocument.name + "/Move", chance: 0.95f);
 

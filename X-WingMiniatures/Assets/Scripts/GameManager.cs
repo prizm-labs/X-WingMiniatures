@@ -66,7 +66,8 @@ public class GameManager : MonoBehaviour {
 	[System.NonSerialized]
 	public GameObject focusedShip;
 
-	string jsonURL = "10.0.1.130:8000/ships.json";
+	//string jsonURL = "10.0.1.130:8000/ships.json";
+	string jsonURL = "localhost:6969/ships.json";
 
 	[System.NonSerialized]
 	public JSONClass masterJSON;
@@ -199,7 +200,7 @@ public class GameManager : MonoBehaviour {
 		}
 		for (int i = 99; i > 0; i--) {
 			mainAudioSource.volume = i * .01f;
-			yield return new WaitForSeconds(0.5f);
+			yield return new WaitForSeconds(0.25f);
 		}
 		bigBangStars.SetActive (false);
 		mainAudioSource.Stop();
@@ -349,8 +350,9 @@ public class GameManager : MonoBehaviour {
 				tempShipData.name = "TieFighter";
 				tempShipData.faction = "dark";
 				tempShipData.isStressed = false;
-				tempShipData.actions = new List<string> () { "focus", "targetLock" };
-				tempShipData.maneuvers = new List<string> () { "jesusTurn", "alley-yoop" };
+				tempShipData.actions = " \"focus\", \"targetLock\" }";
+				//tempShipData.maneuvers = new List<string> () { "jesusTurn", "alley-yoop" };
+				tempShipData.maneuvers = "{\"jesusTurn\", \"alley-yoop\" }";
 				tempShipData.hull = 2;
 				tempShipData.shield = 2;
 				tempShipData.owner = "Donald Duck";
@@ -358,10 +360,10 @@ public class GameManager : MonoBehaviour {
 				tempShipData.selectedAction = "focus";
 				tempShipData.cost = 1000;
 				tempShipData.agility = 10;
-				tempShipData.selectedPilot = "Darth Vader";
+				tempShipData.selectedPilot = "Howlrunner";
 				//Debug.LogError ("LOOK HERE" + masterJSON.ToString());
 				//Debug.LogError ("finding pilots" + masterJSON ["ships"] [0] ["pilots"].ToString ());
-				tempShipData.pilots = masterJSON ["ships"] [3] ["pilots"].ToString ();
+				tempShipData.pilots = masterJSON ["ships"] [2] ["pilots"].ToString ();
 
 				//Debug.Log ("tempdata's pilots : " + tempShipData.pilots);
 				
@@ -377,8 +379,9 @@ public class GameManager : MonoBehaviour {
 				tempShipData.name = "MillenniumFalcon";
 				tempShipData.faction = "light";
 				tempShipData.isStressed = false;
-				tempShipData.actions = new List<string> () { "focus", "targetLock" };
-				tempShipData.maneuvers = new List<string> () { "jesusTurn", "alley-yoop" };
+				tempShipData.actions = " \"focus\", \"targetLock\" }";
+				//tempShipData.maneuvers = new List<string> () { "jesusTurn", "alley-yoop" };
+				tempShipData.maneuvers = "{\"jesusTurn\", \"alley-yoop\" }";
 				tempShipData.hull = 2;
 				tempShipData.shield = 2;
 				tempShipData.owner = "Scotch Tape";
@@ -502,23 +505,30 @@ public class GameManager : MonoBehaviour {
 
 		switch (MyGameState) {
 		case GameState.WaitingForPlayersEnter:
-			Debug.Log ("GameState of Waiting for players to enter");
+			StartCoroutine (IntroduceWorld ());
+
+
+			//send message to HH to choose ships (might wait 2 seconds)
 			break;
 		case GameState.WaitingForPlayersChooseShip:
-			//Debug.Log ("players choosing ship");
-			StartCoroutine (IntroduceWorld ());
 			CreateSortedListShips ();
+			//Debug.Log ("players choosing ship");
+			//in this state we will send message to HH to show planning phase
 			break;
 		case GameState.PlanningPhase:
 			StartCoroutine (ExecuteAllShipsManeuvers ());
 			Debug.Log ("players are planning");
 			break;
 		case GameState.ActivationPhase:
-			Debug.Log ("players activating");
+			//when activation is done, need to clean up as in: 
+			//all ships need to execute their action (evade, focus, etc)
+			//this is where tokens get placed
+			Debug.Log ("players activating, waiting for all players to lock in an action on handheld");
 			break;
 		case GameState.CombatPhase:
 			Debug.Log ("entering combat phase");
 			StartCoroutine (ExecuteAllShipsCombat ());
+			//advance to next phase when all ships have been hit (check if phaseresponsibilitiescompleted)
 			break;
 		case GameState.EndPhase:
 			Debug.Log ("cleanup phase");
@@ -545,7 +555,9 @@ public class GameManager : MonoBehaviour {
 		//remember to give a UI text indication that sthe stage is advancing
 		//make this ui notice look nicer?
 
-		createMsgLog ("Now entering game state: " + MyGameState.ToString ());
+		//createMsgLog ("Now entering game state: " + MyGameState.ToString ());
+
+		Debug.Log ("we are now in the " + MyGameState.ToString () + " phase");
 
 	}
 
@@ -569,12 +581,13 @@ public class GameManager : MonoBehaviour {
 	private IEnumerator ExecuteAllShipsCombat() {
 		foreach (GameObject craft in sortedShipList) {
 			StartCoroutine(craft.GetComponent<Ship>().EnterCombat());
-			if (craft.GetComponent<Ship> ().record.mongoDocument.faction == "dark")
-				PlayAudioChance ("CombatPhase/" + craft.GetComponent<Ship> ().record.mongoDocument.faction, chance: 0.80f);
+			PlayAudioChance ("CombatPhase/" + craft.GetComponent<Ship> ().record.mongoDocument.faction);
 			while (!craft.GetComponent<Ship> ().phaseDutiesCompleted) {
 				yield return null;
 			}
 		}
+
+		AdvanceGameState ();
 	}
 
 	private IEnumerator ExecuteAllShipsManeuvers() {
@@ -585,7 +598,10 @@ public class GameManager : MonoBehaviour {
 				yield return null;
 			}
 			yield return new WaitForSeconds (1.0f);
+			craft.GetComponent<Ship> ().phaseDutiesCompleted = true;
 		}
+
+		AdvanceGameState ();
 	}
 
 	public void PlayAudioChance (string folder, string specificTrack = null, float chance = 0.20f, float volume = 1.0f) {
