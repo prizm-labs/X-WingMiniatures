@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using SimpleJSON;
+using System;
 
 
 public enum clientStatuses {paired=0, groupsSynced, uiReady, playerReady, waiting, running, paused, ended}
@@ -33,43 +34,28 @@ public class PlayerSchema: MongoSchema {
 	}
 }
 
+
+
 public class ShipSchema: MongoSchema {
 	public string name = "";
 	public string owner = "";
 	public int weapon = 0;
 	public int agility = 0;
-	public int shield = 0;
-	public int hull = 0;
+	public int currentShield = 0;
+	public int currentHull = 0;
 	public string faction = "";
 	public bool isStressed = false;
 	public string selectedPilot = "";
 	public int cost = 0;
-	public string upgrades = "";
 
-	public string actions = "";
+
+	public List<string> actions = new List<string>();
 	public string selectedAction  = "";
 
 	public string selectedManeuver = "";
-	public string maneuvers = ""; 	//json array of json objects
-
-	public string selectedUpgrades = "";
-	/*
-	"manuevers":[
-		{ "speed":1,"direction":"left","difficulty":0 },
-	]
-	*/
-	public string pilots = "";	//json array of json objects
-	/*
-	 "pilots":[
-       {
-         "name":"",
-         "initiative":0,
-         "ability":"",
-         "abilityIsUnique":false,
-         "cost":0
-       }
-     ]
-     */
+	public List<Maneuver> maneuvers = new List<Maneuver>(); 	//json array of json objects
+	public List<string> selectedUpgrades = new List<string>();
+	public List<PilotData> pilots = new List<PilotData>();	//json array of json objects
 
 	public override Dictionary<string, object> toDictionary() {
 
@@ -81,14 +67,13 @@ public class ShipSchema: MongoSchema {
 		dictionary.Add("owner", owner);
 		dictionary.Add("weapon", weapon.ToString());
 		dictionary.Add("agility", agility.ToString());
-		dictionary.Add("shield", shield.ToString());
-		dictionary.Add("hull", hull.ToString());
+		dictionary.Add("currentShield", currentShield.ToString());
+		dictionary.Add("currentHull", currentHull.ToString());
 		dictionary.Add("faction", faction);
 		dictionary.Add("isStressed", isStressed);
 		dictionary.Add("selectedPilot", selectedPilot);
 		dictionary.Add("cost", cost.ToString());
 
-		dictionary.Add("upgrades", upgrades.ToString());
 		dictionary.Add("actions", actions.ToString());
 
 		dictionary.Add("selectedAction", selectedAction);
@@ -125,6 +110,36 @@ public class ShipSchema: MongoSchema {
 */
 		return dictionary;
 	}
+
+
+
+	[Serializable]
+	public class Maneuver
+	{
+		public int speed;
+		public string direction;
+		public int difficulty;
+
+	}
+
+	[Serializable]
+	public class PilotData
+	{
+		public string name;
+		public string ability;
+		public bool isUnique;
+		public int cost;
+		public int skill;
+		public int weapon;
+		public int agility;
+		public int hull;
+		public int shield;
+		public List<string> upgrades = new List<string>();
+	}
+
+
+
+
 }
 
 public class UpgradeSchema: MongoSchema {
@@ -146,6 +161,16 @@ public class UpgradeSchema: MongoSchema {
 		} ;	
 		return dictionary;
 	}
+}
+
+[Serializable]
+public class Upgrade
+{
+	public string name;
+	public string type;
+	public int cost;
+	public string ability;
+	public bool isUnique;
 }
 
 public class ObstacleSchema: MongoSchema{

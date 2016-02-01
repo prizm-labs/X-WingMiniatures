@@ -143,11 +143,29 @@ public class TabletopInitialization : MonoBehaviour {
 
 		//set up handlers
 		shipRecordGroup.mongoCollection.DidAddRecord += (string arg1, ShipSchema arg2) => {
-			Debug.Log ("New Ship Added! "+arg1 +" ID is: "+arg2._id+" name is: " + arg2.name);
-			
+			//Debug.Log ("New Ship Added! "+arg1 +" ID is: "+arg2._id+" name is: " + arg2.name);
+
+
+			Debug.Log("PRINTING name: " + arg2.name);
+			Debug.Log("PRINTING owner: " + arg2.owner);
+			Debug.Log("PRINTING faction: " + arg2.faction);
+			Debug.Log("PRINTING isStressed: " + arg2.isStressed.ToString());
+			Debug.Log("PRINTING second action: " + arg2.actions[1]);
+			Debug.Log("PRINTING maneuvers count: " + arg2.maneuvers.Count.ToString());
+			Debug.Log("PRINTING fourht maneuver: " + arg2.maneuvers[3].Serialize().ToString());
+
+			Debug.Log("PRINTING fifth maneuver difficulty: " + arg2.maneuvers[4].difficulty.ToString());
+			Debug.Log("PRINTING currentshield: " + arg2.currentShield.ToString());
+			Debug.Log("PRINTING selectedUpgrades: " + arg2.selectedUpgrades.ToString());
+			Debug.Log("PRINTING selectedUpgrades count: " + arg2.selectedUpgrades.Count.ToString());
+			Debug.Log("PRINTING second pilot: " + arg2.pilots[1].Serialize().ToString());
+			Debug.Log("PRINTING second pilot ability: " + arg2.pilots[1].ability);
+
+
+
 			PrizmRecord<ShipSchema> record = shipRecordGroup.LookUpPrizmRecordBy_ID(arg2._id);
+			//if record == null, implies record was created by the server
 			if(record == null) {
-				Debug.Log("record is null, the record was created by the server");
 				PrizmRecord<ShipSchema> newRecord = new PrizmRecord<ShipSchema>();
 
 				newRecord.mongoDocument = arg2;
@@ -156,18 +174,25 @@ public class TabletopInitialization : MonoBehaviour {
 				newRecord.mongoDocument._GUID = System.Guid.NewGuid ();
 				newRecord.mongoDocument.key = shipRecordGroup.collectionKey;
 
-				Debug.Log("checking new recor'ds owner: " + newRecord.mongoDocument.owner);
 
 				shipRecordGroup.associates.Add(newRecord);
 			}
 
 			//instantiate the ship
 		};
-		
+
+
 		shipRecordGroup.mongoCollection.DidChangeRecord += (string arg1, ShipSchema arg2, IDictionary arg3, string[] arg4) => {
 			Debug.Log ("Resource changed! SessionID: "+arg1+" key is: "+arg2.key+" rest is: "+arg2.ToString());
+			//Debug.Log("checking if things change on both ends automatically");
+			//Debug.Log("record side: " + arg2.selectedAction);
+
+			//this record automagically has all the same attributes as arg2 (no need to re-assign them)
 			PrizmRecord<ShipSchema> record = shipRecordGroup.LookUpPrizmRecordBy_ID(arg2._id);
 			if(record == null) return;	//didn't find the record in the recordgroup
+
+			///Debug.Log(" unity side: " + record.mongoDocument.selectedAction);
+			Debug.Log("unity side, checking _guid and _id" + record.mongoDocument._GUID + ":" + record.mongoDocument._id);
 
 			
 		};

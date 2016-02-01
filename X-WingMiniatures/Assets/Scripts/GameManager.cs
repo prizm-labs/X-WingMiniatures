@@ -342,7 +342,7 @@ public class GameManager : MonoBehaviour {
 			CreateNewPlayer (newPlay);
 		}
 
-
+		/*
 		if (Input.GetKeyDown (KeyCode.S)) {
 
 			if (Random.value > 0.5f) {
@@ -350,9 +350,9 @@ public class GameManager : MonoBehaviour {
 				tempShipData.name = "TieFighter";
 				tempShipData.faction = "dark";
 				tempShipData.isStressed = false;
-				tempShipData.actions = " \"focus\", \"targetLock\" }";
-				//tempShipData.maneuvers = new List<string> () { "jesusTurn", "alley-yoop" };
-				tempShipData.maneuvers = "{\"jesusTurn\", \"alley-yoop\" }";
+				//tempShipData.actions = " \"focus\", \"targetLock\" }";
+				tempShipData.actions = new List<string> () { "jesusTurn", "alley-yoop" };
+
 				tempShipData.hull = 2;
 				tempShipData.shield = 2;
 				tempShipData.owner = "Donald Duck";
@@ -363,7 +363,9 @@ public class GameManager : MonoBehaviour {
 				tempShipData.selectedPilot = "Howlrunner";
 				//Debug.LogError ("LOOK HERE" + masterJSON.ToString());
 				//Debug.LogError ("finding pilots" + masterJSON ["ships"] [0] ["pilots"].ToString ());
-				tempShipData.pilots = masterJSON ["ships"] [2] ["pilots"].ToString ();
+
+				//tempShipData.pilots = (List<ShipSchema.Pilot>) JsonUtility.FromJson(masterJSON ["ships"] [2] ["pilots"].Value.ToString(), typeof(ShipSchema.Pilot));
+
 
 				//Debug.Log ("tempdata's pilots : " + tempShipData.pilots);
 				
@@ -379,9 +381,11 @@ public class GameManager : MonoBehaviour {
 				tempShipData.name = "MillenniumFalcon";
 				tempShipData.faction = "light";
 				tempShipData.isStressed = false;
-				tempShipData.actions = " \"focus\", \"targetLock\" }";
+				//tempShipData.actions = " \"focus\", \"targetLock\" }";
+				tempShipData.actions = new List<string> () { "jesusTurn", "alley-yoop" };
+
 				//tempShipData.maneuvers = new List<string> () { "jesusTurn", "alley-yoop" };
-				tempShipData.maneuvers = "{\"jesusTurn\", \"alley-yoop\" }";
+				//tempShipData.maneuvers = "{\"jesusTurn\", \"alley-yoop\" }";
 				tempShipData.hull = 2;
 				tempShipData.shield = 2;
 				tempShipData.owner = "Scotch Tape";
@@ -392,7 +396,8 @@ public class GameManager : MonoBehaviour {
 				tempShipData.selectedPilot = "Chewbacca";
 				//Debug.LogError ("LOOK HERE" + masterJSON.ToString());
 				//Debug.LogError ("finding pilots" + masterJSON ["ships"] [0] ["pilots"].ToString ());
-				tempShipData.pilots = masterJSON ["ships"] [0] ["pilots"].ToString ();
+
+				//tempShipData.pilots = (List<ShipSchema.Pilot>) JsonUtility.FromJson(masterJSON ["ships"] [1] ["pilots"].Value.ToString(), typeof(ShipSchema.Pilot));
 
 				//Debug.Log ("tempdata's pilots : " + tempShipData.pilots);
 
@@ -406,6 +411,8 @@ public class GameManager : MonoBehaviour {
 				//giveShipToPlayer (playerList [(int)Random.Range (0, playerList.Count)].GetComponent<Player> (), tempShipRecord);
 			}
 		}
+
+		*/
 		if (Input.GetKeyDown (KeyCode.D)) {
 			ToggleTime ();
 		}

@@ -50,9 +50,7 @@ where TMongoDocument : MongoSchema, new() {
 	}
 
 	private void bindRecord (TMongoDocument mongoDoc) {
-		Debug.Log ("before");
 		PrizmRecord<TMongoDocument> unboundRecord = unboundAssociates[mongoDoc._GUID];
-		Debug.Log ("before");
 		unboundRecord.mongoDocument._id = mongoDoc._id;
 		unboundRecord.mongoDocument.key = this.collectionKey;
 

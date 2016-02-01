@@ -14,7 +14,7 @@ public class Pilot {
 	public int cost;
 	public int skill;
 
-	List<string> uppgrades = new List<string>();
+	List<string> upgrades = new List<string>();
 
 	//finds the pilot's name from a json config file to initialize them
 	public Pilot(JSONNode pilotJsonData) {
@@ -29,4 +29,18 @@ public class Pilot {
 		cost = jsonObj ["cost"].AsInt;
 		skill = jsonObj ["skill"].AsInt;
 	}
+
+
+	public Pilot(ShipSchema.PilotData pilotData) {
+		name = pilotData.name;
+		weapon = pilotData.weapon;
+		agility = pilotData.agility;
+		hull = pilotData.hull;
+		shield = pilotData.shield;
+		ability = pilotData.ability;
+		isUnique = pilotData.isUnique;
+		cost = pilotData.cost;
+		skill = pilotData.skill;
+	}
+
 }

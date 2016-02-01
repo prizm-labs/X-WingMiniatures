@@ -70,9 +70,9 @@ public class Ship : MonoBehaviour {
 	private int expectedNumDice;
 
 	public void GivePilot(string pilotName) {
-		foreach (JSONNode jo in JSON.Parse(record.mongoDocument.pilots).AsArray) {
-			if (jo ["name"].Value.ToString() == pilotName) {
-				myPilot = new Pilot (jo);
+		foreach (ShipSchema.PilotData pilot in record.mongoDocument.pilots) {
+			if (pilot.name == pilotName) {
+				myPilot = new Pilot (pilot);
 				break;
 			}
 		}
@@ -350,19 +350,19 @@ public class Ship : MonoBehaviour {
 
 	public void TakeDamage(int damageTaken) {
 		int damageLeft = damageTaken;
-		if (record.mongoDocument.shield > 0 && damageLeft > 0) {
-			record.mongoDocument.shield--;
+		if (record.mongoDocument.currentShield > 0 && damageLeft > 0) {
+			record.mongoDocument.currentShield--;
 			damageLeft--;
-		} else if (record.mongoDocument.hull > 0 && damageLeft > 0) {
-			record.mongoDocument.hull--;
+		} else if (record.mongoDocument.currentHull > 0 && damageLeft > 0) {
+			record.mongoDocument.currentHull--;
 			damageLeft--;
 		}
 
 		Debug.Log ("damageLeft: " + damageLeft.ToString ());
-		Debug.Log ("done calculating damage, shield/hull: " + record.mongoDocument.shield + "/" + record.mongoDocument.hull);
+		Debug.Log ("done calculating damage, shield/hull: " + record.mongoDocument.currentShield + "/" + record.mongoDocument.currentHull);
 		Debug.Log ("took " + damageTaken.ToString () + " points of damage.");
 
-		if (record.mongoDocument.hull <= 0) {
+		if (record.mongoDocument.currentHull <= 0) {
 			//ship is kill
 		}
 
