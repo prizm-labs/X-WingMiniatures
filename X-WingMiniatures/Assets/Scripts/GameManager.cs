@@ -30,6 +30,11 @@ public class GameManager : MonoBehaviour {
 	
 	public GameObject playerPrefab;
 	public GameObject blankShipPrefab;	//used to check if a ship will collide with another in getrandomposition
+
+	public GameObject lightShipPrefab;
+	public GameObject darkShipPrefab;
+
+
 	public Text msgPrefab;
 
 	[System.NonSerialized]
@@ -94,6 +99,8 @@ public class GameManager : MonoBehaviour {
 	List<GameObject> munitions = new List<GameObject> ();
 	List<Vector3> velocities = new List<Vector3> ();
 
+	public GameObject lightPlayer;
+	public GameObject darkPlayer;
 	
 
 	void Awake () {
@@ -104,57 +111,10 @@ public class GameManager : MonoBehaviour {
 		
 		DontDestroyOnLoad (this.gameObject);
 
-		StartCoroutine(LoadJsonFromServer ());
-
-		//uncomment this when done working on main scene
-
-		//playerNumSlider = GameObject.Find ("Slider").GetComponent<Slider> ();
-		//playerNumUI = GameObject.Find ("Number").GetComponent<Text> ();
-		//playerNumSlider.value = 0.25f;
-
-
-		//comment this out when done working on main scene
 		InitializeGameManager();
 		MyGameState++;
 	}
-
-	/*
-	void Start() {
-		TT_Reference = GetComponent<TabletopInitialization> ();
-		shipRecordGroup = TT_Reference.shipRecordGroup;
-		StartCoroutine (TT_Reference.ConfigureShipDatabase());
-		playerCollection = TT_Reference.playerCollection;
-	}
-	*/
-
-	public void SetPlayerNum() {
-		numPlayers =(int) (playerNumSlider.value * (float)maxNumPlayers + 1.0f);
-		UpdatePlayerNumUI();
-	}
-
-	public void UpdatePlayerNumUI() {
-		playerNumUI.text = numPlayers.ToString();
-	}
-
-	public void LoadMainScene() {
-		UpdatePlayerNumUI ();
-		MyGameState++;
-		SceneManager.LoadScene ("Main");
-	}
-
-	IEnumerator LoadJsonFromServer(){
-		masterJSON = new JSONClass ();
-
-		var json = new WWW (jsonURL);
-		yield return json;
-
-		masterJSON = JSON.Parse (json.text).AsObject;
-		Debug.Log("JSON loaded!");
-	}
-
-	void OnLevelWasLoaded() {
-		InitializeGameManager ();
-	}
+		
 
 	void InitializeGameManager(){
 		playerManagerObject = GameObject.Find ("PlayerManager");
@@ -180,6 +140,15 @@ public class GameManager : MonoBehaviour {
 
 		CreateBoundariesDice ();
 		CreateBoundariesShip ();
+
+		lightPlayer = Instantiate (lightShipPrefab) as GameObject;
+		darkPlayer = Instantiate (darkShipPrefab) as GameObject;
+
+		lightPlayer.transform.position = GetRandomSpawnPosition ("light");
+		darkPlayer.transform.position = GetRandomSpawnPosition ("dark");
+
+		lightPlayer.transform.GetChild (0).gameObject.SetActive (false);
+		darkPlayer.transform.GetChild (0).gameObject.SetActive (false);
 	}
 
 	IEnumerator IntroduceWorld() {
