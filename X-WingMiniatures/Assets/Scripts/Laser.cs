@@ -56,6 +56,7 @@ public class Laser : MonoBehaviour {
 		}
 		catch (MissingReferenceException ex) {
 			//do nothing
+			Debug.Log("ex: " + ex.ToString());
 		}
 	}
 
