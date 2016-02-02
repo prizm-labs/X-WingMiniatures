@@ -83,8 +83,10 @@ public class GameManager : MonoBehaviour {
 
 
 	private int maxNumPlayers = 5;
-	private int numPlayers = 2;
-	private int numPlayersJoined = 0;
+	[System.NonSerialized]
+	public int numPlayers = 2;
+	[System.NonSerialized]
+	public int numPlayersJoined = 0;
 	private int numShips = 0;
 	//private bool readyToMoveOntoNextPhase = false;
 
@@ -114,6 +116,11 @@ public class GameManager : MonoBehaviour {
 		InitializeGameManager();
 		MyGameState++;
 	}
+
+	void Start() {
+		//StartCoroutine (IntroduceWorld());
+
+	}
 		
 
 	void InitializeGameManager(){
@@ -136,23 +143,30 @@ public class GameManager : MonoBehaviour {
 		starsMaster.SetActive (false);
 		actionStars.SetActive (false);
 
-		waitingForText.GetComponent<Text> ().text = "Waiting for " + (numPlayers - numPlayersJoined).ToString () + " more players to join\nJoin IP Address:'" + TabletopInitialization.GetIP () + ":6969'";
 
 		CreateBoundariesDice ();
 		CreateBoundariesShip ();
 
-		lightPlayer = Instantiate (lightShipPrefab) as GameObject;
-		darkPlayer = Instantiate (darkShipPrefab) as GameObject;
+		lightPlayer = GameObject.Find ("TapToSpawnLight");
+		darkPlayer = GameObject.Find ("TapToSpawnDark");
 
-		lightPlayer.transform.position = GetRandomSpawnPosition ("light");
-		darkPlayer.transform.position = GetRandomSpawnPosition ("dark");
+		lightPlayer.transform.position = GetRandomSpawnPosition ("light", true);
+		darkPlayer.transform.position = GetRandomSpawnPosition ("dark", true);
 
 		lightPlayer.transform.GetChild (0).gameObject.SetActive (false);
 		darkPlayer.transform.GetChild (0).gameObject.SetActive (false);
+
+		darkPlayer.SetActive (false);
+
+		lightPlayer.SetActive (false);
 	}
 
 	IEnumerator IntroduceWorld() {
-		
+
+
+
+		yield return new WaitForSeconds (1.0f);
+
 		starsMaster.SetActive (true);
 		bigBangStars.SetActive (true);
 		mainAudioSource.clip = starWarsIntroClip;
@@ -169,227 +183,42 @@ public class GameManager : MonoBehaviour {
 		}
 		for (int i = 99; i > 0; i--) {
 			mainAudioSource.volume = i * .01f;
-			yield return new WaitForSeconds(0.25f);
+			yield return new WaitForSeconds(0.1f);
 		}
 		bigBangStars.SetActive (false);
 		mainAudioSource.Stop();
 		intro3DText.SetActive (false);
-	}
 
-	void SetupRecordHandlers() {
-		playerCollection.DidAddRecord += (string arg1, PlayerSchema arg2) => {
-			var doc = arg2;
-			if (doc.session_id == TabletopInitialization.Instance.sessionID) {
-				Debug.Log("creating player record handled from gamemanager");
-				//GetComponent<GameManager>().CreateNewPlayer(doc);
-				CreateNewPlayer(doc);
-			}
-		};
-
-		shipRecordGroup.didAddRecord += HandleDidAddShipRecord;
-		shipRecordGroup.didChangeRecord += HandleDidChangeShipRecord;
-		shipRecordGroup.didChangeRecord += HandleDidChangeShipRecord;
-
+		darkPlayer.SetActive (true);
+		lightPlayer.SetActive (true);
 
 	}
+
 		
-	//finds the ship and moves the corresponding ship
-	//looks at gamestate to determine which field we are looking for
-	void HandleDidChangeShipRecord (string arg1, ShipSchema arg2, IDictionary arg3, string[] arg4)
-	{
-		GameObject owner = playerList.Find (p => p.GetComponent<Player> ().playerID.Equals (arg2.owner));
-		GameObject ship_obj = owner.GetComponent<Player> ().shipsUnderCommand.Find (x => x.GetComponent<Ship> ().record.mongoDocument._id.Equals (arg2._id));
-		Debug.Log ("ship that was found when record changed: " + ship_obj.name + ", with id: " + ship_obj.GetComponent<Ship> ().record.mongoDocument._id);
-
-		Ship shipCraft = ship_obj.GetComponent<Ship> ();
-
-		switch (MyGameState) {
-		case GameState.PlanningPhase:		//looking for intended movements
-											//set selectedManeuver in ship object?
-			shipCraft.record.mongoDocument.selectedManeuver = arg2.selectedManeuver;
-			shipCraft.phaseDutiesCompleted = true;
-
-			break;
-		case GameState.ActivationPhase:		//looking for intended actions	
-											//set selectedAction in ship object?
-			shipCraft.record.mongoDocument.selectedAction = arg2.selectedAction;
-			shipCraft.phaseDutiesCompleted = true;
-
-			break;
-
-			//ship will update thier hull's damage and that will trigger this
-		case GameState.CombatPhase:			//rolling dice (probably not using in record change handler)
-			Debug.LogError("ship record changed during combat phase, hull took damage... :/");
-			//ships set their own phasedutiescompleted to true
-			break;
-		default:
-			Debug.Log ("ship record changed in game state: " + MyGameState.ToString ());
-			break;
-		}
-
-
-
-		bool nextPhase = true;	//readyToMoveOntoNextPhase;
-		//checks if all players are ready to move on, if so, advanceGameState();
-		foreach( GameObject ply in playerList) {
-			foreach (GameObject shipObj in ply.GetComponent<Player>().shipsUnderCommand) {
-				nextPhase = nextPhase && shipObj.GetComponent<Ship> ().phaseDutiesCompleted;
-			}
-		}
-
-		if (nextPhase) {
-			AdvanceGameState ();
-		}
-
-	}
-
-	void HandleDidAddShipRecord (string arg1, ShipSchema arg2)
-	{
-		Debug.Log ("added ship: " + arg1);
-
-		//make a record on our side from the data received
-		PrizmRecord<ShipSchema> tempRecord = new PrizmRecord<ShipSchema> ();
-		tempRecord.mongoDocument = arg2;
-
-		//find the owner from the list
-		GameObject owner = playerList.Find (p => p.GetComponent<Player> ().playerID.Equals (arg2.owner));
-		Debug.Log ("faction before giving: " + owner.GetComponent<Player> ().faction);
-		//give the ship to the player
-		giveShipToPlayer (owner.GetComponent<Player>(), tempRecord);
-
-
-	}
-
-	//functions that show how to 'give' players objects
-	//instantiates ship and creates the game object from the shiprecord
-	void giveShipToPlayer(Player ply, PrizmRecord<ShipSchema> shipRecord) {
-		numShips++;
-
-		GameObject ship_obj = Instantiate (Resources.Load<GameObject> ("ShipPrefabs/" + shipRecord.mongoDocument.name));
-
-		shipRecord.gameObject = ship_obj;
-
-		ship_obj.layer = 10;
-
-
-
-		//give database items
-		ship_obj.GetComponent<Ship> ().record = shipRecord;
-		ship_obj.GetComponent<Ship>().AnnounceSelf();
-
-		//give pilot
-		ship_obj.GetComponent<Ship>().GivePilot(shipRecord.mongoDocument.selectedPilot);
-		ship_obj.GetComponent<Ship> ().PlayerOwner = ply;
-
-		ply.shipsUnderCommand.Add (ship_obj); 
-		ship_obj.transform.SetParent (ply.transform);
-		//Debug.Log ("faction: " + ply.faction);
-		ship_obj.transform.position = GetRandomSpawnPosition(ply.faction);		
-	}
-
 	void Update(){
 
 		if (Input.GetKeyDown (KeyCode.Q)) {
-			InitializeGameManager ();
+			StartCoroutine(IntroduceWorld ());
 		}
 		if (Input.GetKeyDown (KeyCode.W)) {
-			StartCoroutine(IntroduceWorld ());
+			darkPlayer.SetActive (true);
+			lightPlayer.SetActive (true);
 		}
 		if (Input.GetKeyDown (KeyCode.E)) {
 			AdvanceGameState ();
 		}
 		if (Input.GetKeyDown (KeyCode.R)) {
-			PlayerSchema newPlay = new PlayerSchema ();
-			newPlay.faction = "dark";
-			newPlay.name = "Donald Duck";
-			CreateNewPlayer (newPlay);
+
 		}
 		if (Input.GetKeyDown (KeyCode.A)) {
-			PlayerSchema newPlay = new PlayerSchema ();
-			newPlay.faction = "light";
-			newPlay.name = "Scotch Tape";
-			CreateNewPlayer (newPlay);
+
 		}
-
-		/*
-		if (Input.GetKeyDown (KeyCode.S)) {
-
-			if (Random.value > 0.5f) {
-				ShipSchema tempShipData = new ShipSchema ();
-				tempShipData.name = "TieFighter";
-				tempShipData.faction = "dark";
-				tempShipData.isStressed = false;
-				//tempShipData.actions = " \"focus\", \"targetLock\" }";
-				tempShipData.actions = new List<string> () { "jesusTurn", "alley-yoop" };
-
-				tempShipData.hull = 2;
-				tempShipData.shield = 2;
-				tempShipData.owner = "Donald Duck";
-				tempShipData.selectedManeuver = "jesusTurn";
-				tempShipData.selectedAction = "focus";
-				tempShipData.cost = 1000;
-				tempShipData.agility = 10;
-				tempShipData.selectedPilot = "Howlrunner";
-				//Debug.LogError ("LOOK HERE" + masterJSON.ToString());
-				//Debug.LogError ("finding pilots" + masterJSON ["ships"] [0] ["pilots"].ToString ());
-
-				//tempShipData.pilots = (List<ShipSchema.Pilot>) JsonUtility.FromJson(masterJSON ["ships"] [2] ["pilots"].Value.ToString(), typeof(ShipSchema.Pilot));
-
-
-				//Debug.Log ("tempdata's pilots : " + tempShipData.pilots);
-				
-						
-				PrizmRecord<ShipSchema> tempShipRecord = new PrizmRecord<ShipSchema> ();
-				tempShipRecord.mongoDocument = tempShipData;
-
-				//Debug.Log ("player in list: " + playerList [0].ToString ());
 			
-				giveShipToPlayer (playerList [0].GetComponent<Player> (), tempShipRecord);
-			} else {
-				ShipSchema tempShipData = new ShipSchema ();
-				tempShipData.name = "MillenniumFalcon";
-				tempShipData.faction = "light";
-				tempShipData.isStressed = false;
-				//tempShipData.actions = " \"focus\", \"targetLock\" }";
-				tempShipData.actions = new List<string> () { "jesusTurn", "alley-yoop" };
-
-				//tempShipData.maneuvers = new List<string> () { "jesusTurn", "alley-yoop" };
-				//tempShipData.maneuvers = "{\"jesusTurn\", \"alley-yoop\" }";
-				tempShipData.hull = 2;
-				tempShipData.shield = 2;
-				tempShipData.owner = "Scotch Tape";
-				tempShipData.selectedManeuver = "jesusTurn";
-				tempShipData.selectedAction = "focus";
-				tempShipData.cost = 1000;
-				tempShipData.agility = 10;
-				tempShipData.selectedPilot = "Chewbacca";
-				//Debug.LogError ("LOOK HERE" + masterJSON.ToString());
-				//Debug.LogError ("finding pilots" + masterJSON ["ships"] [0] ["pilots"].ToString ());
-
-				//tempShipData.pilots = (List<ShipSchema.Pilot>) JsonUtility.FromJson(masterJSON ["ships"] [1] ["pilots"].Value.ToString(), typeof(ShipSchema.Pilot));
-
-				//Debug.Log ("tempdata's pilots : " + tempShipData.pilots);
-
-
-				PrizmRecord<ShipSchema> tempShipRecord = new PrizmRecord<ShipSchema> ();
-				tempShipRecord.mongoDocument = tempShipData;
-
-				//Debug.Log ("player in list: " + playerList [0].ToString ());
-
-				giveShipToPlayer (playerList[1].GetComponent<Player> (), tempShipRecord);
-				//giveShipToPlayer (playerList [(int)Random.Range (0, playerList.Count)].GetComponent<Player> (), tempShipRecord);
-			}
-		}
-
-		*/
 		if (Input.GetKeyDown (KeyCode.D)) {
 			ToggleTime ();
 		}
 		if (Input.GetKeyDown (KeyCode.F)) {
-			CreateSortedListShips ();
-			foreach (GameObject ship in sortedShipList) {
-				Debug.Log ("ship name: " + ship.name);
-			}
+
 		}
 		if (Input.GetKeyDown (KeyCode.Z)) {
 			PlayAudioChance ("Music", "DarthVader", 0.90f);
@@ -427,11 +256,26 @@ public class GameManager : MonoBehaviour {
 		}
 	}
 
-	public Vector3 GetRandomSpawnPosition(string faction) {
+	public Vector3 GetRandomSpawnPosition(string faction, bool middle = false) {
 		//light spawns on left, dark spawns on right
 		Vector3 tryPos;
 		RaycastHit hit;
 		bool goingToCollide = false;
+
+		if (middle) {
+			switch (faction) {
+			case "light":
+				tryPos = mainCamera.ViewportToWorldPoint (new Vector3 (0.05f, 0.5f, DistanceFromCamera));
+				return tryPos;
+
+			case "dark":
+				tryPos = mainCamera.ViewportToWorldPoint (new Vector3 (0.95f, 0.5f, DistanceFromCamera));
+				return tryPos;
+			}
+		}
+
+
+
 
 		int attempts = 10;		//will try 10 times before giving up
 
@@ -478,21 +322,25 @@ public class GameManager : MonoBehaviour {
 
 	public void AdvanceGameState() {
 
+		numPlayersJoined = 0;
+
 
 		switch (MyGameState) {
 		case GameState.WaitingForPlayersEnter:
-			StartCoroutine (IntroduceWorld ());
+			//StartCoroutine (IntroduceWorld ());
+			//AdvanceGameState();
+			MyGameState++;
 
 
 			//send message to HH to choose ships (might wait 2 seconds)
 			break;
 		case GameState.WaitingForPlayersChooseShip:
-			CreateSortedListShips ();
+			//CreateSortedListShips ();
 			//Debug.Log ("players choosing ship");
 			//in this state we will send message to HH to show planning phase
 			break;
 		case GameState.PlanningPhase:
-			StartCoroutine (ExecuteAllShipsManeuvers ());
+			//StartCoroutine (ExecuteAllShipsManeuvers ());
 			Debug.Log ("players are planning");
 			break;
 		case GameState.ActivationPhase:
@@ -503,13 +351,13 @@ public class GameManager : MonoBehaviour {
 			break;
 		case GameState.CombatPhase:
 			Debug.Log ("entering combat phase");
-			StartCoroutine (ExecuteAllShipsCombat ());
+			//StartCoroutine (ExecuteAllShipsCombat ());
 			//advance to next phase when all ships have been hit (check if phaseresponsibilitiescompleted)
 			break;
 		case GameState.EndPhase:
 			Debug.Log ("cleanup phase");
 			//check if all ships of one faction are dead
-			CheckWinCondition();
+			//CheckWinCondition();
 			break;
 		default:
 			Debug.LogError("game state unstable!" + MyGameState.ToString());
@@ -639,58 +487,6 @@ public class GameManager : MonoBehaviour {
 		return num;
 	}
 
-
-		
-
-	private void CreateSortedListShips() {
-		List<GameObject> randomShipList = new List<GameObject> ();
-		foreach( GameObject ply in playerList) {
-			foreach (GameObject shipObj in ply.GetComponent<Player>().shipsUnderCommand) {
-				randomShipList.Add (shipObj);
-			}
-		}
-
-		sortedShipList = randomShipList.OrderBy (obj => obj.GetComponent<Ship>().myPilot.skill).ToList();
-	}
-
-	//called on when a player record is added
-	public void CreateNewPlayer(PlayerSchema playerToCreate) {
-		createMsgLog (playerToCreate.name + " has joined the game!");
-
-		//instantiate player prefab
-		GameObject newPlayer = Instantiate(playerPrefab) as GameObject;
-		newPlayer.GetComponent<Player> ().record.mongoDocument = playerToCreate;
-		newPlayer.GetComponent<Player> ().initializePlayer (playerToCreate.name, playerToCreate.faction, playerToCreate._id);
-
-		newPlayer.transform.SetParent (playerManagerObject.transform);
-		playerList.Add (newPlayer);
-
-
-
-		numPlayersJoined++;
-		if (numPlayersJoined >= numPlayers) {
-			//disable record handler
-
-
-			AdvanceGameState ();
-			createMsgLog (" ");
-			waitingForText.SetActive (false);
-		} else {
-			waitingForText.GetComponent<Text> ().text = "Waiting for " + (numPlayers - numPlayersJoined).ToString () + " more players to join\nJoin IP Address:'" + TabletopInitialization.GetIP () + ":6969'";
-		}
-	}
-		
-
-	//when someone quits the game
-	public void HandleDidLosePlayer(string id) {
-		foreach(GameObject obj in Object.FindObjectsOfType(typeof(GameObject))){
-			if(obj.tag == "Player"){
-				//probably destroy the player object
-			}
-		}
-
-		Debug.LogError ("player lost connection, object is: " + id);
-	}
 
 
 
@@ -860,21 +656,6 @@ public class GameManager : MonoBehaviour {
 
 		Destroy(rightBound.GetComponent<MeshRenderer>());
 		Destroy(rightBound.GetComponent<MeshCollider>());
-	}
-
-
-	void OnApplicationQuit(){
-		StopAllCoroutines ();
-		reset ();
-	}
-
-	public void reset(){
-		StartCoroutine (resetGame ());
-	}
-
-	IEnumerator resetGame() {
-		var methodCall = Meteor.Method<ChannelResponse>.Call ("endTabletopSession", GameObject.Find ("GameManager").GetComponent<TabletopInitialization>().sessionID);
-		yield return (Coroutine)methodCall;
 	}
 		
 

@@ -20,6 +20,8 @@ public class Laser : MonoBehaviour {
 
 	void Awake() {
 		rb = GetComponent<Rigidbody> ();
+		explosion = transform.FindChild ("Explosion").gameObject;
+		explosion.SetActive (false);
 	}
 
 	// Update is called once per frame
@@ -34,16 +36,32 @@ public class Laser : MonoBehaviour {
 		transform.LookAt (target);
 		rb.AddForce (transform.forward * lazorThrust);
 		yield return null;
+		yield return new WaitForSeconds (3.0f);
+		Explode ();
 	}
 
-	void Explode() {
+	IEnumerator Explode() {
 
-		Destroy (this.gameObject);
+		rb.velocity = Vector3.zero;
+		coreObject.SetActive (false);
+
+
+		Debug.Log ("exploded");
+		explosion.SetActive (true);
+		yield return new WaitForSeconds (1.0f);
+
+		try {
+			if (this.gameObject != null)
+			Destroy (this.gameObject);
+		}
+		catch (MissingReferenceException ex) {
+			//do nothing
+		}
 	}
 
 	void OnTriggerEnter(Collider coll) {
 		if (coll.transform == target) {
-			Explode ();
+			StartCoroutine(Explode ());
 
 		}
 	}

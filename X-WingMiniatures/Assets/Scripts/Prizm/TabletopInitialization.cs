@@ -116,12 +116,12 @@ public class TabletopInitialization : MonoBehaviour {
 			var doc = arg2;
 			Debug.Log("player added to playercollection.  this is PSA from tabletopinitilization.cs");
 			if (doc.session_id == sessionID) {
-				GetComponent<GameManager>().CreateNewPlayer(doc);
+				//GetComponent<GameManager>().CreateNewPlayer(doc);
 				//Debug.Log("belongs to us!");
 			}
 		};
 		
-		playerCollection.DidRemoveRecord += gameManager.HandleDidLosePlayer;
+		//playerCollection.DidRemoveRecord += gameManager.HandleDidLosePlayer;
 		channelCollection.DidChangeRecord += HandleDidChangeRecordSync;		//allows HH to gamesync routine with TT
 
 

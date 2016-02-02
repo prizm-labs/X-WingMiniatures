@@ -16,10 +16,15 @@ public class Ship : MonoBehaviour {
 	public Material greenManeuverMaterialPrefab;
 	public Material whiteManeuverMaterialPrefab;
 
+	public bool isAttacking = false;
 	private GameObject shieldObject;
+
+	public AudioClip moveClip;
 
 	public GameObject protonTorpedoPrefab;
 	public GameObject laserPrefab;
+
+	bool tieFighterDodged = false;
 
 	[System.NonSerialized]
 	public Pilot myPilot;
@@ -43,7 +48,7 @@ public class Ship : MonoBehaviour {
 	public static int steps = 10;	//how many microsteps to move the ship between each curve point (the more, the smoother)
 
 	[System.NonSerialized]
-	public static float attackRangeDelta = 10.0f;	//what is the radius of each attack field
+	public static float attackRangeDelta = 25.0f;	//what is the radius of each attack field
 
 	[System.NonSerialized]
 	public bool phaseDutiesCompleted = false;
@@ -91,13 +96,22 @@ public class Ship : MonoBehaviour {
 		lineRenderer = GetComponent<LineRenderer> ();
 		points = new List<Vector3> ();
 
-		selectedTarget = GameObject.Find ("TestTarget");
+		//selectedTarget = GameObject.Find ("TestTarget");
 
 		shieldObject = transform.FindChild ("Shield").gameObject;
 		shieldObject.SetActive (false);
 
 		GetComponent<ParticleSystem> ().Stop ();
+
+		if (gameObject.name == "TieFighter") {
+			selectedTarget = GameObject.Find ("MillenniumFalcon");
+			Debug.Log ("target is mill falcon");
+		} else if (gameObject.name == "MillenniumFalcon") {
+			selectedTarget = GameObject.Find ("TieFighter");
+			Debug.Log ("target is tie fighter");
+		}
 	}
+		
 
 	void Update() {
 		if (Input.GetKeyDown (KeyCode.P)) {
@@ -111,7 +125,7 @@ public class Ship : MonoBehaviour {
 		if (Input.GetKeyDown (KeyCode.I)) {
 			maneuverRoutine = ExecuteManeuver("{\"speed\":\"5\",\"direction\":\"straight\",\"difficulty\":\"0\"}");
 
-			//StartCoroutine(maneuverRoutine);
+			StartCoroutine(maneuverRoutine);
 		}
 			
 		if (Input.GetKeyDown (KeyCode.U)) {
@@ -124,15 +138,9 @@ public class Ship : MonoBehaviour {
 			StartCoroutine(FireLazors ());
 		}
 		if (Input.GetKeyDown (KeyCode.J)) {
-			if (record.mongoDocument.name == "MillenniumFalcon")
-				StartCoroutine(DoABarrelRoll(1, 1.0f));
-					else
 			StartCoroutine (DoABarrelRoll (1));
 		}
 		if (Input.GetKeyDown (KeyCode.H)) {
-			if (record.mongoDocument.name == "MillenniumFalcon")
-				StartCoroutine(DoABarrelRoll(-1, 1.0f));
-			else
 			StartCoroutine (DoABarrelRoll (-1));
 		}
 		if (Input.GetKeyDown (KeyCode.M)) {
@@ -148,7 +156,17 @@ public class Ship : MonoBehaviour {
 
 	private IEnumerator FireLazors() {
 
-		GameManager.Instance.PlayAudioChanceAtPoint (record.mongoDocument.name + "/Shoot", chance: 0.95f);
+		//GameManager.Instance.PlayAudioChanceAtPoint (record.mongoDocument.name + "/Shoot", chance: 0.95f);
+
+
+		if (gameObject.name == "TieFighter") {
+			selectedTarget = GameObject.Find ("MillenniumFalcon");
+			Debug.Log ("target is mill falcon");
+		} else if (gameObject.name == "MillenniumFalcon") {
+			selectedTarget = GameObject.Find ("TieFighter");
+			Debug.Log ("target is tie fighter");
+		}
+
 
 		for (int i = 0; i < numLasers; i++) {
 			GameObject laze = Instantiate (laserPrefab) as GameObject;
@@ -164,7 +182,20 @@ public class Ship : MonoBehaviour {
 	}
 		
 	void OnEnable() {
-		GetComponent<TapGesture> ().Tapped += SelectSelfAsTarget;
+		GetComponent<TapGesture> ().Tapped += HandleTap;
+
+		if (gameObject.name == "TieFighter") {
+			selectedTarget = GameObject.Find ("MillenniumFalcon");
+			Debug.Log ("target is mill falcon");
+		} else if (gameObject.name == "MillenniumFalcon") {
+			selectedTarget = GameObject.Find ("TieFighter");
+			Debug.Log ("target is tie fighter");
+		}
+
+	}
+
+	void OnDisable() {
+		GetComponent<TapGesture> ().Tapped -= HandleTap;
 	}
 
 
@@ -240,16 +271,9 @@ public class Ship : MonoBehaviour {
 
 	//glow the player
 	//set all the other ships in gamemanager's list as not targeted
-	void SelectSelfAsTarget (object sender, System.EventArgs e)
+	void HandleTap (object sender, System.EventArgs e)
 	{
-		if (GameManager.Instance.MyGameState == GameState.CombatPhase) {
-			foreach (GameObject ship in GameManager.Instance.sortedShipList) {
-				ship.GetComponent<Ship> ().DeselectSelfAsTarget ();
-			}
-			GameManager.Instance.focusedShip = this.gameObject;
-
-			GetComponent<ParticleSystem> ().Stop ();
-		}
+		Debug.Log ("ship tapped");
 	}
 
 	public void DeselectSelfAsTarget() {
@@ -257,12 +281,18 @@ public class Ship : MonoBehaviour {
 		GetComponent<ParticleSystem>().Play();
 	}
 
-	void OnDisable() {
-		GetComponent<TapGesture> ().Tapped -= SelectSelfAsTarget;
-	}
+
 
 	private IEnumerator FireProtonTorpedos() {
-		GameManager.Instance.PlayAudioChanceAtPoint (record.mongoDocument.name + "/Shoot", chance: 0.95f);
+		//GameManager.Instance.PlayAudioChanceAtPoint (record.mongoDocument.name + "/Shoot", chance: 0.95f);
+
+		if (gameObject.name == "TieFighter") {
+			selectedTarget = GameObject.Find ("MillenniumFalcon");
+			Debug.Log ("target is mill falcon");
+		} else if (gameObject.name == "MillenniumFalcon") {
+			selectedTarget = GameObject.Find ("TieFighter");
+			Debug.Log ("target is tie fighter");
+		}
 
 		for (int i = 0; i < numTorpedos; i++) {
 			GameObject torp = Instantiate (protonTorpedoPrefab) as GameObject;
@@ -282,16 +312,16 @@ public class Ship : MonoBehaviour {
 		//Debug.Log ("my record is: " + record.mongoDocument);
 
 	}
-	private IEnumerator ScanAttackRange() {
+	public IEnumerator ScanAttackRange() {
 		potentialAttackTargets.Clear ();
 
 		if (playerOwner != null) {
-			switch (playerOwner.faction) {
+			switch (playerOwner.gameObject.name) {
 
-			case "light":
+			case "TapToSpawnLight":
 				lineRenderer.material = greenManeuverMaterialPrefab;
 				break;
-			case "dark":
+			case "TapToSpawnDark":
 				lineRenderer.material = redManeuverMaterialPrefab;
 				break;
 			default:
@@ -314,16 +344,14 @@ public class Ship : MonoBehaviour {
 
 						hit = hits [h];
 					if (hit.transform.tag == "Ship") {
-						//Debug.DrawLine (transform.position, hit.point);
-						//Debug.Log ("HIT SOMETHING! YAY1");
-						//has to not already be in list, not already be tagged, not be in the same faction
-						if (!hit.transform.gameObject.GetComponent<Ship> ().taggedAsPotentialTarget && !potentialAttackTargets.Contains(hit.transform.gameObject) 
-								&& hit.transform.gameObject.GetComponent<Ship> ().record.mongoDocument.faction != record.mongoDocument.faction) {
-							hit.transform.gameObject.GetComponent<Ship> ().taggedAsPotentialTarget = true;
-							hit.transform.gameObject.GetComponent<Ship> ().ShowAsAvailableTarget ();
-
-							potentialAttackTargets.Add (hit.transform.gameObject);
+						if (tieFighterDodged == false && gameObject.name == "MillenniumFalcon") {
+							StartCoroutine(hit.transform.gameObject.GetComponent<Ship>().DodgeAttackBarrelRolls());
+							tieFighterDodged = true;
 						}
+						if (Random.value < 0.5f) StartCoroutine (FireLazors ());
+						else StartCoroutine (FireProtonTorpedos ());
+						lineRenderer.SetVertexCount (0);
+						return false;
 					}
 				}
 
@@ -333,7 +361,7 @@ public class Ship : MonoBehaviour {
 				lineRenderer.SetPosition (0, selfOrigin);
 				lineRenderer.SetPosition (1, selfOrigin + (Quaternion.AngleAxis (i, Vector3.up) * Vector3.forward) * j * attackRangeDelta);
 
-				yield return new WaitForSeconds (0.005f);
+				yield return new WaitForSeconds (0.000000005f);
 
 			}
 		}
@@ -405,15 +433,7 @@ public class Ship : MonoBehaviour {
 			coll.gameObject.GetComponent<Rigidbody> ().isKinematic = false;
 		}
 	}
-
-	void OnTriggerEnter (Collider coll) {
-		if (coll.tag == "GateToHell") {
-			Debug.Log ("hit the gate to hell, sending to hell");
-
-			Destroy (this.gameObject);
-
-		}
-	}
+		
 
 	private IEnumerator NormalizeBearingsDelay(float time = 1.0f) {
 		yield return new WaitForSeconds (time);
@@ -445,7 +465,7 @@ public class Ship : MonoBehaviour {
 	public IEnumerator ExecuteManeuver(string json) {
 		isMoving = true;
 
-		GameManager.Instance.PlayAudioChanceAtPoint (record.mongoDocument.name + "/Move", chance: 0.95f);
+		AudioSource.PlayClipAtPoint (moveClip, new Vector3(0, 100, 0));
 
 		List<Vector3> drawingPoints = new List<Vector3> ();
 		List<Vector3> skeletonPoints = new List<Vector3> ();
@@ -518,6 +538,9 @@ public class Ship : MonoBehaviour {
 
 		isMoving = false;
 		StartCoroutine (NormalizeBearingsDelay ());
+
+		if (isAttacking)
+		StartCoroutine (ScanAttackRange ());
 	}
 
 	public IEnumerator RollDice(string attackOrDefend, int numDice) {
@@ -594,8 +617,7 @@ public class Ship : MonoBehaviour {
 
 	private IEnumerator DodgeAttackBarrelRolls() {
 		float duration = 0.50f;
-		if (record.mongoDocument.name == "MillenniumFalcon")
-			duration = 1.0f;
+
 		GetComponent<BoxCollider> ().enabled = false;
 		StartCoroutine (DoABarrelRoll (1, duration));
 		yield return new WaitForSeconds (duration + 0.05f);
